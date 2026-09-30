@@ -2,6 +2,7 @@
 
 **Play it: [korak-the-mighty.github.io/nightdrive](https://korak-the-mighty.github.io/nightdrive/)**
 
+![Nightdrive — the opening scene outside NIGHT DRIVE](docs/preview-opening.png)
 ![Nightdrive — clear night, with the blimp overhead](docs/preview-clear.png)
 ![Nightdrive — rain](docs/preview-rain.png)
 
@@ -10,6 +11,17 @@ beach strip. It's a white 80s supercar cruising past hotels, bars and motels und
 palm trees, with wet-road reflections and bloom. Everything is drawn in code:
 there are no image assets. It runs in any modern browser and is built to be
 screen-captured as the visual for long mixtapes.
+
+It opens outside the NIGHT DRIVE club. The car is parked with the engine off
+under a rooftop neon extravaganza: a striped outrun sun, NIGHT in hot-pink
+tubes, DRIVE in chrome, chasing marquee bulbs, neon palms and two searchlights
+sweeping the sky. It buzzes on letter by letter, and its light washes over the
+car. Our man leans on the car, smoking, looking around and talking to you now
+and then ("I'd offer you a cigarette, but... you're a screen."), while the
+music holds an inviting groove. Press START and he flicks the cigarette, gets
+in, fires her up (pop-up headlights and all), puts the shades on and says his
+line to the camera. The car pulls away exactly as the music drops, about five
+seconds after you pressed START.
 
 The strip doesn't take itself too seriously. About a third of the neon is a
 gag: the MIAMI NICE and GATOR ARMS hotels, SYNTH & TONIC and CROCKETT'S,
@@ -27,6 +39,7 @@ same thing bundled into one file you can copy anywhere (rebuild it with
 
 | Key | Action |
 | --- | --- |
+| `Enter` / `Space` / `↑` | Start (in the opening scene; clicking the START button works too) |
 | `↑` / `↓` | Speed pedal: hold to accelerate or brake (all the way to a stop); let go to hold the speed. The music keeps its own tempo. |
 | `F` / double-click | Fullscreen |
 | `M` | Music on/off (sound starts with your first click or key press) |
@@ -41,7 +54,8 @@ same thing bundled into one file you can copy anywhere (rebuild it with
 | `Space` | Pause |
 | `D` | FPS / frame-time stats |
 
-**On a phone or tablet** there are touch controls instead: hold the ▼ / ▲
+**On a phone or tablet**, tap the START button in the opening scene (a tap
+anywhere else turns the sound on). Then there are touch controls: hold the ▼ / ▲
 pedals (bottom right) to brake and accelerate, and the ☰ button (top right)
 opens music, next track, weather, driver talk, titles, letterbox, pause,
 hide pedals, fullscreen and record. Held sideways the picture fills the screen (a thin
@@ -52,6 +66,7 @@ Every visit starts a fresh soundtrack, so the first track and style are
 random.
 
 URL options:
+- `?intro=0` skips the opening scene and starts on the road.
 - `?seed=1234` picks a different city, and fixes the soundtrack too.
 - `?weather=clear|drizzle|rain|storm|mist` locks the weather. By default a
   director cycles it every few minutes, and storms bring lightning.
@@ -129,7 +144,10 @@ back out: "One for the road never hurt."), to the speed pedal ("Pedal to the
 metal!", "Red light? Good. The hair needs a minute."), and now and then just
 muses ("Suave.", "No socks. Never socks.", "Business up front... party in the
 back."). Sometimes he turns to the camera ("Sunglasses at night? Always.") and
-nods when he's done.
+nods when he's done. In the opening scene he says hello when the sound comes
+on, chats to the camera while you make up your mind ("Don't mind me. Just
+leaning. Professionally."), and his last line before you drive off ("Hold on
+to your shoulder pads.") ends exactly as the music drops.
 
 He waits for a clear moment, so he never talks over the robot, the hooks
 or the silent beat, and the music dips under his voice like a radio DJ's.
@@ -187,10 +205,17 @@ standard 16:9 size, so pixels stay perfectly square and crisp: 2× for 720p,
   neon around it, that lands where it should: on the road at its own depth
   (a crown, droplets thrown up, a ripple ring) or bursting on the hero car's
   roof, hood and deck; lightning bolts and flashes, mist and overcast.
+- `src/art/bigsign.js`: the NIGHT DRIVE rooftop sign, its power-up sequence
+  and animation; `src/art/dude.js`: the driver on foot (body poses, and a head
+  drawn from pixel maps so it can look around, blink, talk and let the mullet
+  blow in the wind).
+- `src/intro.js`: the opening scene: his idle behaviour, the START prompt,
+  and the launch sequence, stretched to land on the music's drop.
 - `src/fx.js`: the volumetric lamp cones, headlight beams, film grain, umbrellas,
   and aircraft (planes, a helicopter with a searchlight, and the blimp with
   its scrolling LED sign).
-- `src/audio.js`: the generative soundtrack (composer and melody writer,
+- `src/audio.js`: the generative soundtrack (the opening's lobby loop and the
+  jump into a drop on START, composer and melody writer,
   sequencer, the four styles' synths and drum kits, 8-bit samples, gated
   reverb, ping-pong delay, sidechain, and the vocoder), the weather ambience,
   and the beat and drop sync for the visuals.

@@ -783,6 +783,62 @@
     return pack(F, w, h, spec);
   }
 
+  // The NIGHT DRIVE building: a low Deco club with the big rooftop sign
+  // (see bigsign.js) standing on its roof, lighting everything below it.
+  function* genNightDrive(spec) {
+    const r = ND.rng(spec.seed || 1985);
+    const w = spec.w || 420;
+    const ph = 12, fh = 38, gh = 64;
+    const h = ph + fh + gh;
+    const F = new Facade(w, h);
+    const wall = A('#8f7cd0'), trim = A('#e2d8ff');
+    const groundY = ph + fh;
+    F.surf(0, 0, w, h, wall);
+    F.mulRect(0, 0, 2, h, 0.72);
+    F.mulRect(w - 2, 0, 2, h, 0.84);
+    // parapet with speed grooves, and the club's own little sign
+    F.mulRect(0, 0, w, 1, 1.35);
+    for (let y = 3; y < ph - 2; y += 3) F.mulRect(3, y, w - 6, 1, 0.76);
+    F.surf(0, ph - 2, w, 2, trim, 1.2);
+    F.mulRect(0, ph, w, 2, 0.62);
+    const om = ND.textMask('OPEN ALL NIGHT', { gap: 1 });
+    const [oc, ot] = ND.NEON.cyan;
+    const ox = Math.round((w - om.w) / 2);
+    F.emit(ox - 4, 1, om.w + 8, ph - 2, [20, 12, 40], 0);
+    F.light(ox, 5, ox + om.w, 5, ot, 0.9, 14);
+    F.post.push(() => ND.neonMask(F.col, F.glow, om, ox, 2, oc, ot, { halo: false }));
+    // the sign pours pink and cyan light down the facade
+    F.light(40, -6, 380, -6, [255, 70, 190], 1.6, 34);
+    F.light(150, -4, 270, -4, [255, 170, 90], 0.9, 26);
+    F.light(40, -2, 120, -2, [60, 220, 255], 0.8, 22);
+    F.light(300, -2, 380, -2, [60, 220, 255], 0.8, 22);
+    yield;
+    regionWindows(F, 8, w - 8, ph, fh, trim, r, 0.55, 14, 'eyebrow');
+    neonLine(F, 4, w - 5, ph + fh - 4, 'pink', 0.9);
+    yield;
+    // ground floor: a glowing club front with a centre entrance and a canopy
+    const glassY = groundY + 16, glassH = h - 4 - glassY;
+    F.surf(0, h - 4, w, 4, ND.scale(wall, 0.5), 1);
+    F.mulRect(0, h - 4, w, 1, 1.6);
+    const doorX = Math.round(w / 2 - 8);
+    interior(F, 10, glassY, doorX - 16, glassH, r, 'club');
+    yield;
+    interior(F, doorX + 22, glassY, w - 10 - doorX - 22, glassH, r, 'club');
+    yield;
+    for (let x = 10 + 24; x < doorX - 8; x += 24) F.surf(x, glassY, 2, glassH, trim, 0.6);
+    for (let x = doorX + 22 + 24; x < w - 12; x += 24) F.surf(x, glassY, 2, glassH, trim, 0.6);
+    door(F, doorX, glassY + 4, 16, glassH - 4, trim, r);
+    F.surf(4, glassY - 8, w - 8, 4, trim, 1.15);
+    F.mulRect(4, glassY - 4, w - 8, 2, 0.55);
+    neonLine(F, 4, w - 5, glassY - 5, 'magenta', 1.0);
+    for (let x = 16; x < w - 16; x += r.int(14, 22)) if (r() < 0.7) F.crowd.push(x);
+    yield* F.shade();
+    yield;
+    const out = pack(F, w, h, spec);
+    out.bigsign = ND.genBigSign(spec.seed || 1985);
+    return out;
+  }
+
   function bladeLike(F, text, cx, y, neonName, r) {
     const [c, t] = ND.NEON[neonName];
     const mk = ND.textMask(text, { vertical: true, scale: 2, gap: 3 });
@@ -834,7 +890,7 @@
     motel: ['INN', 'LODGE', 'MOTOR', 'SNORE', 'ZZZ'],
   };
 
-  ND.BUILDING_GEN = { hotel: genHotel, bar: genBar, shop: genShop, motel: genMotel };
+  ND.BUILDING_GEN = { hotel: genHotel, bar: genBar, shop: genShop, motel: genMotel, nightdrive: genNightDrive };
   ND.PALETTES = PALETTES;
   ND.PAL_KEYS = PAL_KEYS;
 })();

@@ -1,0 +1,293 @@
+/* Nightdrive — the driver on foot, for the opening scene: leaning on the car
+ * under the NIGHT DRIVE sign, ankles crossed, cigarette in hand, the mullet
+ * moving in the breeze. Same face as the man at the wheel (cars.js), minus the
+ * shades: he puts those on when he gets in.
+ *
+ * Body frames are drawn once (arm and leg poses); the head is composed live
+ * from pixel maps so it can look around, blink, talk and let its hair blow.
+ */
+(function () {
+  'use strict';
+  const ND = window.ND;
+  const { rgb } = ND;
+
+  const DW = 48, DH = 120, FOOT = 118; // body frame size, feet row
+  const HX = 14, HY = 3;               // where the head map sits in the frame
+
+  // ---- heads (18 wide; the mullet is the hair on the right) --------------------
+  const PAL = {
+    H: rgb('#fff2b0'), h: rgb('#f2c662'), d: rgb('#c48c36'), k: rgb('#7a4e22'),
+    S: rgb('#f8c6a6'), s: rgb('#e49c7c'), z: rgb('#b06a54'), e: rgb('#c4705a'), n: rgb('#a8624e'),
+    E: rgb('#2a1420'), l: rgb('#d07a6a'), T: rgb('#fff8ee'), m: rgb('#5a1a24'),
+    G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
+  };
+  // three-quarter view, to the camera
+  const CAM = [
+    '.....kkkkkkk......',
+    '...kkhHHHHHhkk....',
+    '..khHHHhhhhhhhk...',
+    '.khHhhhhhhhhhhdk..',
+    '.khhhhhhhhhhhhddk.',
+    'khhhSSSSSSShhhdddk',
+    'khhSSSSSSSSShhdddk',
+    'khSddSSSSSddShdddk',
+    'khSEESSSSSEEShdddk',
+    'khSSSSSsSSSSShdddk',
+    'khSSSSSsSSSSShdddk',
+    'khSSSSszsSSSShdddk',
+    '.hSSSSSSSSSSShdddk',
+    '.hSSSSlllzSSShddk.',
+    '.hsSSSSSSSSSshdddk',
+    '..hzsssssssszhdddk',
+    '...hzzzzzzzzhhddk.',
+    '....nnnnnnnhhdddk.',
+  ];
+  const CAM_MOUTH = [{}, { 13: '.hSSSlmmmlSSShddk.' }, { 13: '.hSSlTTTTTlSShddk.', 14: '.hsSSlmmmlSSshdddk' }];
+  const CAM_BLINK = { 8: 'khSzzSSSSSzzShdddk' };
+  const CAM_SIDE = { 8: 'khEESSSSSEESShdddk' }; // eyes slid to one side
+  // profile, looking up the street (left)
+  const SIDE = [
+    '......kkkkkk......',
+    '....kkhHHHHhkk....',
+    '...khHHHhhhhhhk...',
+    '..khHhhhhhhhhhdk..',
+    '..khhhhhhhhhhhddk.',
+    '.khhhhhhhhhhhhdddk',
+    '.kShhhhshhhhhhdddk',
+    '..Sddssssshhhhdddk',
+    '.SSSEsssssehhhdddk',
+    '..SSSSssszeehhdddk',
+    'SSSSssssszeehhdddk',
+    '..SSsssssszzhhdddk',
+    '.SSSssssszzzhhdddk',
+    '..SSsssszzzzhhddk.',
+    '..Ssssszzzzzhhdddk',
+    '....zzzzzzzzhhdddk',
+    '......nnnnnnhhddk.',
+    '......nnnnnhhdddk.',
+  ];
+  const SIDE_MOUTH = [{}, { 12: '.mSSssssszzzhhdddk' }, { 12: '.mmSssssszzzhhdddk', 13: '..mSsssszzzzhhddk.' }];
+  const SIDE_BLINK = { 8: '.SSSzsssssehhhdddk' };
+
+  // rows -> pixel canvas, with the mullet shifted by the wind (hair right of
+  // column 13, lower rows move most)
+  function headCanvas(rows, over, sway, flip) {
+    const w = 21, h = rows.length;
+    const pb = new ND.PB(w, h);
+    rows.forEach((base, y) => {
+      const row = over[y] || base;
+      const o = y >= 9 ? Math.round(sway * ((y - 8) / 9) * 2.4) : y <= 2 ? Math.round(sway * 0.8) : 0;
+      [...row].forEach((ch, x) => {
+        if (ch === '.') return;
+        const hair = ch === 'h' || ch === 'H' || ch === 'd' || ch === 'k';
+        const dx = hair && x >= 13 ? o : 0;
+        const c = PAL[ch];
+        const px = flip ? 20 - (x + dx) : x + dx;
+        pb.set(px, y, ND.pack(c[0], c[1], c[2]));
+        // fill the gap the blown hair leaves behind
+        if (dx) for (let k = 0; k < dx; k++) {
+          const cc = PAL[row[13]] || PAL.h;
+          const qx = flip ? 20 - (13 + k) : 13 + k;
+          if (!(pb.alpha(qx, y))) pb.set(qx, y, ND.pack(cc[0], cc[1], cc[2]));
+        }
+      });
+    });
+    return pb;
+  }
+
+  // ---- body ---------------------------------------------------------------------
+  const C = {
+    blazer: rgb('#8fb8f0'), blazerL: rgb('#d2e8ff'), blazerD: rgb('#5474b4'), blazerDD: rgb('#34467e'),
+    tee: rgb('#fff2f8'), teeD: rgb('#dcc4dc'),
+    pants: rgb('#f0ece4'), pantsD: rgb('#bdb4cc'), pantsDD: rgb('#8e86a8'),
+    skin: rgb('#f0b494'), skinL: rgb('#f8c6a6'), skinD: rgb('#b06a54'),
+    shoe: rgb('#dcc294'), shoeD: rgb('#9c7a4c'), sole: rgb('#3a2620'),
+    ink: rgb('#1c1028'), gold: rgb('#ffd65a'), paper: rgb('#f6f2e8'), filter: rgb('#d8963c'),
+  };
+
+  // a tapered limb: discs along the bone, radius easing from r0 to r1
+  function bone(pb, a, b, r0, r1, col) {
+    const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      pb.disc(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, r0 + (r1 - r0) * t, ND.pack(col[0], col[1], col[2]));
+    }
+  }
+  // limb with a 1px darker rim, so parts read against each other
+  function limb(pb, a, b, r0, r1, col, rim) {
+    bone(pb, a, b, r0 + 0.8, r1 + 0.8, rim);
+    bone(pb, a, b, r0, r1, col);
+  }
+
+  // Arm poses for the cigarette hand (screen left). hand = where the fingers
+  // are, cig = direction the cigarette points.
+  const ARMS = {
+    hold: { el: [9, 45], hand: [16, 38], cig: [-0.9, -0.45] },
+    lift: { el: [8, 41], hand: [14, 28], cig: [-0.85, -0.55] },
+    drag: { el: [10, 38], hand: [19, 19], cig: [-0.95, -0.2] },
+    flick: { el: [4, 39], hand: [0, 31], cig: [-1, -0.1] },
+    down: { el: [9, 44], hand: [11, 58], cig: null },
+    reach: { el: [4, 37], hand: [-3, 42], cig: null },
+  };
+  // leg poses: [hip, knee, ankle] for the back (screen-right) and front leg
+  const LEGS = {
+    cross: { back: [[27, 59], [26, 86], [17, 113]], front: [[17, 59], [15, 85], [24, 114]] },
+    stand: { back: [[27, 59], [28, 86], [29, 114]], front: [[17, 59], [16, 86], [15, 114]] },
+    step: { back: [[27, 59], [32, 85], [35, 113]], front: [[17, 59], [11, 84], [7, 112]] },
+  };
+
+  function drawBody(armName, legName, shift = 0) {
+    const pb = new ND.PB(DW, DH);
+    const A = ARMS[armName], L = LEGS[legName];
+    const sx = shift; // upper body leans a little on the car
+    // back leg, then the front leg crossing over it
+    const leg = (pts, front) => {
+      const [hip, knee, ank] = pts;
+      limb(pb, hip, knee, 4.6, 3.8, front ? C.pants : C.pantsD, C.pantsDD);
+      limb(pb, knee, ank, 3.6, 2.6, front ? C.pants : C.pantsD, C.pantsDD);
+      // crease down the front of the trouser leg
+      pb.lineFn(knee[0], knee[1] + 2, ank[0], ank[1] - 3, (x, y) => pb.set(x, y, ND.pack(...(front ? C.pantsD : C.pantsDD))));
+      // bare ankle (no socks, obviously) and a loafer pointing out
+      const out = ank[0] < 24 ? -1 : 1;
+      pb.rect(Math.round(ank[0]) - 1, Math.round(ank[1]) - 1, 3, 2, ND.pack(...C.skin));
+      const fy = Math.round(ank[1]) + 1;
+      for (let y = 0; y < 5; y++) {
+        const x0 = Math.round(ank[0]) - (out < 0 ? 6 - (y > 2 ? 1 : 0) : 2), x1 = Math.round(ank[0]) + (out > 0 ? 6 - (y > 2 ? 1 : 0) : 2);
+        for (let x = x0; x <= x1; x++) {
+          const c = y === 4 ? C.sole : y === 0 ? C.shoeD : x === x0 || x === x1 ? C.shoeD : C.shoe;
+          pb.set(x, fy + y - 1, ND.pack(c[0], c[1], c[2]));
+        }
+      }
+    };
+    leg(L.back, false);
+    leg(L.front, true);
+    // torso: the blazer (with 80s shoulders), open over the tee
+    const torso = [[10 + sx, 24], [34 + sx, 23], [36 + sx, 30], [34 + sx, 54], [32, 62], [13, 62], [11, 54], [8 + sx, 30]];
+    pb.polyFn(torso, (x, y) => {
+      const v = (y - 23) / 44;
+      let c = ND.mix(C.blazer, C.blazerD, v * 0.5);
+      if (x > 29 + sx) c = ND.mix(c, C.blazerD, 0.35); // turning away
+      if (x < 13 + sx) c = ND.mix(c, C.blazerL, 0.25);
+      pb.set(x, y, ND.pack(c[0], c[1], c[2]));
+    });
+    // outline of the torso
+    const tset = new Set();
+    pb.polyFn(torso, (x, y) => tset.add(x + ',' + y));
+    for (const k of tset) {
+      const [x, y] = k.split(',').map(Number);
+      if (!tset.has(x - 1 + ',' + y) || !tset.has(x + 1 + ',' + y) || !tset.has(x + ',' + (y + 1))) pb.set(x, y, ND.pack(...C.blazerDD));
+    }
+    // tee in the open front, lapels
+    const tee = [[18 + sx, 22], [27 + sx, 22], [26 + sx, 40], [25, 61], [20, 61], [19 + sx, 40]];
+    pb.polyFn(tee, (x, y) => pb.set(x, y, ND.pack(...(x > 24 + sx ? C.teeD : C.tee))));
+    pb.lineFn(18 + sx, 23, 21 + sx, 44, (x, y) => { pb.set(x, y, ND.pack(...C.blazerL)); pb.set(x - 1, y, ND.pack(...C.blazer)); });
+    pb.lineFn(27 + sx, 23, 24 + sx, 44, (x, y) => { pb.set(x, y, ND.pack(...C.blazerD)); pb.set(x + 1, y, ND.pack(...C.blazer)); });
+    pb.lineFn(21 + sx, 44, 20, 61, (x, y) => pb.set(x, y, ND.pack(...C.blazerD)));
+    pb.lineFn(24 + sx, 44, 25, 61, (x, y) => pb.set(x, y, ND.pack(...C.blazerD)));
+    // belt, pocket flaps, and a pink pocket square
+    for (let x = 20; x <= 25; x++) pb.set(x, 56, ND.pack(...C.shoeD));
+    pb.set(22, 56, ND.pack(...C.gold));
+    for (let x = 12; x <= 17; x++) pb.set(x + sx, 49, ND.pack(...C.blazerDD));
+    for (let x = 27; x <= 32; x++) pb.set(x + sx, 49, ND.pack(...C.blazerDD));
+    for (let x = 28; x <= 31; x++) { pb.set(x + sx, 30, ND.pack(...C.blazerDD)); }
+    pb.set(29 + sx, 28, ND.pack(255, 110, 200)); pb.set(30 + sx, 28, ND.pack(255, 160, 220)); pb.set(29 + sx, 29, ND.pack(255, 80, 180)); pb.set(30 + sx, 29, ND.pack(255, 110, 200));
+    // hand-in-pocket arm (screen right): sleeve out to the elbow, forearm
+    // angling back in, the hand gone into the trouser pocket
+    limb(pb, [32 + sx, 26], [37 + sx, 43], 3.4, 3.0, C.blazerD, C.blazerDD);
+    pb.disc(37 + sx, 43, 2.8, ND.pack(...C.blazerL));
+    pb.disc(37 + sx, 43, 1.9, ND.pack(...C.blazerD));
+    limb(pb, [37 + sx, 44], [32 + sx, 57], 2.1, 1.9, C.skin, C.skinD);
+    pb.set(35 + sx, 51, ND.pack(...C.gold)); pb.set(36 + sx, 51, ND.pack(...C.gold));
+    // neck
+    pb.rect(19 + sx, 19, 6, 5, ND.pack(...C.skinD));
+    pb.rect(20 + sx, 19, 4, 4, ND.pack(...C.skin));
+    // the cigarette arm (screen left), in front of the torso
+    const sh = [10 + sx, 27];
+    limb(pb, sh, A.el, 3.8, 3.2, C.blazer, C.blazerDD);
+    // pushed-up sleeve bunched at the elbow
+    pb.disc(A.el[0], A.el[1], 3.4, ND.pack(...C.blazerL));
+    pb.disc(A.el[0], A.el[1], 2.4, ND.pack(...C.blazer));
+    limb(pb, A.el, A.hand, 2.3, 2.0, C.skin, C.skinD);
+    pb.disc(A.hand[0], A.hand[1], 2.1, ND.pack(...C.skin));
+    pb.set(Math.round(A.hand[0]) + 1, Math.round(A.hand[1]) - 1, ND.pack(...C.skinL));
+    let tip = null;
+    if (A.cig) {
+      const [dx, dy] = A.cig;
+      const x0 = A.hand[0] - 1, y0 = A.hand[1] - 1;
+      pb.set(Math.round(x0), Math.round(y0), ND.pack(...C.filter));
+      for (let k = 1; k <= 4; k++) pb.set(Math.round(x0 + dx * k), Math.round(y0 + dy * k), ND.pack(...C.paper));
+      tip = [x0 + dx * 5, y0 + dy * 5];
+    }
+    // light: the sign behind and above rims him in pink, DRIVE adds cyan on
+    // the right, the street fills the front softly
+    const src = pb.d.slice();
+    const on = (x, y) => x >= 0 && y >= 0 && x < DW && y < DH && src[y * DW + x] >>> 24;
+    for (let y = 0; y < DH; y++)
+      for (let x = 0; x < DW; x++) {
+        const i = y * DW + x;
+        if (!(src[i] >>> 24)) continue;
+        let c = [src[i] & 255, (src[i] >> 8) & 255, (src[i] >> 16) & 255];
+        if (!on(x, y - 1)) c = ND.mix(c, [255, 120, 220], 0.55);
+        else if (!on(x, y - 2)) c = ND.mix(c, [255, 140, 225], 0.2);
+        if (!on(x - 1, y)) c = ND.mix(c, [255, 110, 210], 0.35);
+        if (!on(x + 1, y)) c = ND.mix(c, [90, 230, 255], 0.4);
+        c = ND.mix(c, [150, 110, 220], 0.08 + 0.1 * (y / DH)); // the night itself
+        pb.set(x, y, ND.pack(c[0], c[1], c[2]));
+      }
+    // a thin dark outline so he reads against the busy street
+    for (let y = 0; y < DH; y++)
+      for (let x = 0; x < DW; x++) {
+        if (src[y * DW + x] >>> 24) continue;
+        if (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1)) pb.set(x, y, ND.pack(C.ink[0], C.ink[1], C.ink[2], 200));
+      }
+    return { c: pb.canvas(), tip };
+  }
+
+  function genDude() {
+    const frames = {};
+    for (const arm of ['hold', 'lift', 'drag', 'flick']) frames[arm] = drawBody(arm, 'cross', 1);
+    frames.stand = drawBody('down', 'stand', 0);
+    frames.step = drawBody('down', 'step', 0);
+    frames.reach = drawBody('reach', 'stand', 0);
+    return { frames, W: DW, H: DH, FOOT, HX, HY };
+  }
+
+  // Draws the head at (x, y) = its map origin. view: 'cam' | 'left' | 'right'.
+  function drawHead(ctx, x, y, view, mouth, blink, sway) {
+    sway = Math.round(sway * 4) / 4; // a few wind positions are plenty
+    const key = view + mouth + (blink ? 'b' : '') + sway;
+    let cv = headCache[key];
+    if (!cv) cv = headCache[key] = renderHead(view, mouth, blink, sway);
+    ctx.drawImage(cv, view === 'right' ? x - 3 : x, y); // the flipped map is offset by 3
+    return cv;
+  }
+  function renderHead(view, mouth, blink, sway) {
+    let pb;
+    if (view === 'cam' || view === 'side') {
+      const over = Object.assign({}, view === 'side' ? CAM_SIDE : {}, blink ? CAM_BLINK : {}, CAM_MOUTH[mouth] || {});
+      pb = headCanvas(CAM, over, sway, false);
+    } else {
+      const over = Object.assign({}, blink ? SIDE_BLINK : {}, SIDE_MOUTH[mouth] || {});
+      pb = headCanvas(SIDE, over, sway, view === 'right');
+    }
+    // the same neon light as the body: pink on top, cyan on the right edge
+    const src = pb.d.slice(), w = pb.w, h = pb.h;
+    const on = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && src[yy * w + xx] >>> 24;
+    for (let yy = 0; yy < h; yy++)
+      for (let xx = 0; xx < w; xx++) {
+        const i = yy * w + xx;
+        if (!(src[i] >>> 24)) continue;
+        let c = [src[i] & 255, (src[i] >> 8) & 255, (src[i] >> 16) & 255];
+        if (!on(xx, yy - 1)) c = ND.mix(c, [255, 130, 225], 0.5);
+        if (!on(xx + 1, yy)) c = ND.mix(c, [90, 230, 255], 0.3);
+        pb.set(xx, yy, ND.pack(c[0], c[1], c[2]));
+      }
+    return pb.canvas();
+  }
+  const headCache = {};
+
+  ND.genDude = genDude;
+  ND.drawDudeHead = drawHead;
+  ND.DUDE_PAL = PAL;
+  ND.DUDE = { W: DW, H: DH, FOOT, HX, HY };
+})();

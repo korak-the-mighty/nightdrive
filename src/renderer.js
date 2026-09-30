@@ -245,6 +245,7 @@
       this.drawTraffic(R);
       if (this.q >= 2) this.drawRain(R, [0, 1, 3], 'back');
       this.drawHero(R);
+      if (w.intro) w.intro.draw(R, this); // the man himself, leaning on the car
       this.drawRain(R, this.q >= 2 ? [2, 3] : [0, 1, 2, 3], this.q >= 2 ? 'front' : null);
       this.drawForeground(R);
       this.drawMist(R, 'front');
@@ -355,8 +356,10 @@
         if (x > W || x + it.w < 0) continue;
         if (!it.data) w.jobs.finish(it.job);
         const d = it.data;
+        if (d.bigsign) ND.drawBigSignBeams(d.bigsign, R, x, d.y); // searchlights behind the sign
         this.spr(d.spr, x, d.y);
         for (const a of d.anims) this.anim(R, a, x, d.y);
+        if (d.bigsign) ND.drawBigSign(d.bigsign, R, x, d.y, this);
       }
     }
 
@@ -658,18 +661,67 @@
         cx.globalAlpha = 1;
         cx.globalCompositeOperation = 'source-over';
       }
+      // the NIGHT DRIVE sign washes the paint pink (and a little cyan)
+      const sg = ND.signState;
+      if (sg && sg.light > 0.01 && sg.x != null && sg.frame === R.tick) {
+        const k = sg.light * ND.clamp(1 - Math.abs(sg.x - (x + HW / 2)) / 420, 0, 1);
+        if (k > 0.01) {
+          cx.globalCompositeOperation = 'source-atop';
+          const gr = cx.createLinearGradient(0, 0, 0, HH);
+          gr.addColorStop(0, `rgba(255,80,205,${0.55 * k})`);
+          gr.addColorStop(0.3, `rgba(255,110,215,${0.25 * k})`);
+          gr.addColorStop(0.62, `rgba(80,215,255,${0.12 * k})`);
+          gr.addColorStop(1, 'rgba(0,0,0,0)');
+          cx.fillStyle = gr;
+          cx.fillRect(0, 0, HW, HH);
+          cx.globalCompositeOperation = 'source-over';
+        }
+      }
+      // lamps dark until the engine starts; pop-up headlights rise with them
+      const lights = h.lights;
+      if (lights < 1) {
+        cx.globalAlpha = 1 - lights;
+        cx.drawImage(h.body.lampsOff, 0, h.bob);
+        cx.globalAlpha = 1;
+      }
+      if (h.pods > 0) {
+        const up = Math.max(1, Math.round(h.pods * 4)), by = 36 + h.bob;
+        for (let k = 0; k < up; k++) {
+          cx.fillStyle = k === up - 1 ? '#ffffff' : k === 0 ? '#8a86a8' : '#e6e2f2';
+          cx.fillRect(20, by - k, 11, 1);
+        }
+        cx.fillStyle = lights > 0.5 ? '#fffbe0' : '#9a96b0';
+        cx.fillRect(20, by - up + 1, 1, Math.max(1, up - 1));
+      }
+      // the door, swung out towards us from its front hinge, and him getting in
+      if (h.door > 0) {
+        const th = h.door * 1.25, dw = Math.max(2, Math.round(67 * Math.cos(th))), b = h.bob;
+        cx.fillStyle = '#120c1e'; cx.fillRect(107, 27 + b, 66, 33);
+        cx.fillStyle = '#e4dcea'; cx.fillRect(147, 34 + b, 25, 13); // white leather, naturally
+        cx.fillStyle = '#b8aecc'; cx.fillRect(147, 45 + b, 25, 2);
+        cx.fillStyle = '#d6cee0'; cx.fillRect(161, 27 + b, 10, 8);
+        cx.fillStyle = '#6a6488'; cx.fillRect(107, 57 + b, 66, 3);
+        if (h.seat) this.drawSeat(cx, h);
+        cx.drawImage(h.body.c, 106, 26, 68, 35, 106, 26 + b, dw, 35);
+        cx.fillStyle = `rgba(30,16,50,${0.45 * Math.sin(th)})`;
+        cx.fillRect(106, 26 + b, dw, 35);
+        cx.fillStyle = '#f4f0ff';
+        cx.fillRect(106 + dw, 27 + b, 1, 33);
+      } else if (h.seat) this.drawSeat(cx, h);
       // driver (behind the door), then the door top again so the torso stays inside
       // he talks (lip sync from his voice) and sometimes turns to us, with a
-      // nod when he's done
+      // nod when he's done. Before the shades go on (the opening) he's bare-eyed.
       const Dv = h.driver, tk = this.mp && this.mp.talk;
-      let face = Dv.c, nod = this.nod || 0;
+      const S = h.shades;
+      const set = S >= 1 ? { c: Dv.c, talk: Dv.talk, cam: Dv.cam } : { c: S > 0.5 ? Dv.slide[1] : S > 0 ? Dv.slide[0] : Dv.bare, talk: Dv.bareTalk, cam: Dv.bareCam };
+      let face = h.lookCam ? set.cam[0] : set.c, nod = this.nod || 0;
       if (tk) {
         const open = tk.mouth > 0.55 ? 2 : tk.mouth > 0.2 ? 1 : 0;
-        if (tk.cam) face = Dv.cam[open];
-        else if (open) face = Dv.talk[open - 1];
+        if (tk.cam) face = set.cam[open];
+        else if (open) face = set.talk[open - 1];
         if (tk.cam && tk.left < 0 && tk.left > -0.3) nod = 1;
       }
-      cx.drawImage(face, Dv.x, Dv.y + h.bob + nod);
+      if (h.driverIn) cx.drawImage(face, Dv.x, Dv.y + h.bob + nod);
       // window glass rolls up when it rains
       if (h.window > 0) {
         const top = Math.round(26 - h.window * 23);
@@ -681,7 +733,7 @@
         cx.globalAlpha = 1;
         cx.globalCompositeOperation = 'source-over';
       }
-      cx.drawImage(h.body.c, 104, 26, 108, 2, 104, 26 + h.bob, 108, 2);
+      if (!h.door) cx.drawImage(h.body.c, 104, 26, 108, 2, 104, 26 + h.bob, 108, 2);
       // arm out of the window with the cigarette (pulled in when it rains)
       const A = h.arm;
       const af = A.frames[ND.clamp(Math.round(((h.armTh - A.th0) / (A.th1 - A.th0)) * (A.N - 1)), 0, A.N - 1)];
@@ -710,30 +762,37 @@
       for (const [wx, wy] of ND.HERO.WHEELS) cx.drawImage(WF.frames[fr], wx - WF.R, wy - WF.R);
       // driving lights: pool on the road ahead + a beam you can see in the rain
       const c = this.c, g0 = this.g;
-      const air = 0.06 + 0.5 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8);
-      c.globalCompositeOperation = 'lighter';
-      c.globalAlpha = 0.55;
-      c.drawImage(this.fx.beamGround, x - 212, Y.CAR - 12);
-      c.drawImage(this.fx.redPool, x + 262, Y.CAR - 5);
-      c.globalAlpha = air;
-      c.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
-      c.globalAlpha = 1;
-      c.globalCompositeOperation = 'source-over';
-      g0.globalAlpha = 0.35;
-      g0.drawImage(this.fx.beamGround, x - 212, Y.CAR - 12);
-      g0.globalAlpha = air * 0.6;
-      g0.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
-      g0.globalAlpha = 1;
+      const air = (0.06 + 0.5 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights;
+      if (lights > 0) {
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.55 * lights;
+        c.drawImage(this.fx.beamGround, x - 212, Y.CAR - 12);
+        c.drawImage(this.fx.redPool, x + 262, Y.CAR - 5);
+        c.globalAlpha = air;
+        c.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = 'source-over';
+        g0.globalAlpha = 0.35 * lights;
+        g0.drawImage(this.fx.beamGround, x - 212, Y.CAR - 12);
+        g0.globalAlpha = air * 0.6;
+        g0.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
+        g0.globalAlpha = 1;
+      }
       this.reflect(this.carC, x, Y.CAR, HH, 0.34, R.t, 80);
       this.c.drawImage(this.carC, x, y);
       this.occlude(this.carC, x, y);
-      this.g.drawImage(h.body.g, x, y + h.bob);
-      // light streaks on the road below tail and marker lights
       const g = this.g;
-      g.fillStyle = 'rgba(255,30,50,0.45)';
-      g.fillRect(x + 293, Y.CAR + 3, 6, 40);
-      g.fillStyle = 'rgba(255,150,30,0.35)';
-      g.fillRect(x + 1, Y.CAR + 6, 6, 26);
+      if (lights > 0) {
+        g.globalAlpha = lights;
+        this.g.drawImage(h.body.g, x, y + h.bob);
+        // light streaks on the road below tail and marker lights
+        g.fillStyle = 'rgba(255,30,50,0.45)';
+        g.fillRect(x + 293, Y.CAR + 3, 6, 40);
+        g.fillStyle = 'rgba(255,150,30,0.35)';
+        g.fillRect(x + 1, Y.CAR + 6, 6, 26);
+        if (h.pods > 0.5) { g.fillStyle = 'rgba(255,250,220,0.9)'; g.fillRect(x + 18, y + 32 + h.bob, 4, 4); }
+        g.globalAlpha = 1;
+      }
       // cigarette ember glow + smoke trail streaming back in the wind
       const A2 = h.arm;
       const af2 = A2.frames[ND.clamp(Math.round(((h.armTh - A2.th0) / (A2.th1 - A2.th0)) * (A2.N - 1)), 0, A2.N - 1)];
@@ -753,6 +812,23 @@
           c.fillRect(Math.round(x + p.x), Math.round(y + p.y), k < 0.5 ? 2 : 1, k < 0.25 ? 2 : 1);
         }
       }
+    }
+
+    // Him getting into the seat while the door is open: the bare-eyed driver
+    // head with his blazer below it, seen through the window and the doorway.
+    drawSeat(cx, h) {
+      const st = h.seat, Dv = h.driver, b = h.bob;
+      cx.save();
+      cx.beginPath();
+      cx.moveTo(114.5, 26 + b); cx.lineTo(144.5, 4 + b); cx.lineTo(173, 4 + b); cx.lineTo(173, 26 + b); cx.closePath();
+      if (h.door > 0) cx.rect(107, 26 + b, 66, 31);
+      cx.clip();
+      const hx = Math.round(st.x), hy = Math.round(st.y) + b;
+      cx.fillStyle = '#8fb8f0'; cx.fillRect(hx + 3, hy + 20, 13, 24);
+      cx.fillStyle = '#5474b4'; cx.fillRect(hx + 13, hy + 20, 3, 24);
+      cx.fillStyle = '#f0ece4'; cx.fillRect(hx - 10, hy + 38, 18, 7);
+      cx.drawImage(Dv.bare, hx, hy);
+      cx.restore();
     }
 
     // "Now playing" card when a new track starts.
@@ -1026,10 +1102,17 @@
             c.fillRect(px, py, 1, 1);
             continue;
           }
+          if (p.exh) { // exhaust: bigger, softer puffs
+            c.fillStyle = `rgba(160,150,196,${0.5 * Math.pow(1 - k, 0.8)})`;
+            const sz = 2 + Math.floor(k * 3);
+            c.fillRect(px, py, sz, sz);
+            continue;
+          }
           c.fillStyle = `rgba(146,136,182,${0.78 * Math.pow(1 - k, 0.75)})`;
           c.fillRect(px, py, k > 0.45 ? 2 : 1, k > 0.7 ? 2 : 1);
         }
       }
+      if (this.world.intro) this.world.intro.drawPost(R, this); // his smoke, and PRESS START
       // lightning washes the whole street for a moment
       const fl = R.weather.flash;
       if (fl > 0.01) {

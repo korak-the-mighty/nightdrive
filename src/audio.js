@@ -342,6 +342,9 @@
       this.seed = seed;
       this.r = ND.rng(seed * 13 + 7);
       this.forceStyle = STYLES.includes(opts.style) ? opts.style : null;
+      // the opening scene: hold an inviting loop (intro, then the verse over and
+      // over) until launch() sends the track into its first drop
+      this.lobby = !!opts.lobby;
       this.chatter = true; // the driver talks
       this.talkReq = [];
       this.recentTalk = [];
@@ -658,6 +661,7 @@
       ND.bus.on('arm-out', () => this.request('smoke'));
       ND.bus.on('window-up', () => this.request('window'));
       ND.bus.on('speed', (e) => this.request(e.zone, 8));
+      this.emit('start');
     }
     toggle() {
       if (!this.ctx || !this.enabled) { this.start(); return true; }
@@ -686,6 +690,14 @@
     newTrack() {
       const prev = this.track;
       this.track = makeTrack(this.r, prev, this.trackIndex++, this.forceStyle);
+      if (this.lobby) {
+        // eight bars of intro, then the verse loops while we wait
+        const S = this.track.sections;
+        S[0].bars = 8;
+        let b = 0;
+        for (const sec of S) { sec.start = b; b += sec.bars; }
+        this.track.totalBars = b;
+      }
       this.bar = 0;
       this.stepIdx = 0;
       this.prevVoicing = null;
@@ -697,7 +709,7 @@
         this.n.dl.delayTime.setValueAtTime(this.stepDur * 3, Math.max(t, this.nextTime || t));
         this.n.dr.delayTime.setValueAtTime(this.stepDur * 3, Math.max(t, this.nextTime || t));
       }
-      this.marks.push({ t: this.nextTime || 0, type: 'track', track: T });
+      if (!this.lobby) this.marks.push({ t: this.nextTime || 0, type: 'track', track: T });
       this.emit('track', T);
       this.vplan = this.planVocals(T);
     }
@@ -781,6 +793,26 @@
     }
 
     driverTalk(t, s, sb, k) {
+      if (this.lobby) {
+        if (k % 4 || t < (this.talkEnd || 0) + 1.5 || !this.clearAhead(t, 1)) return;
+        this.talkReq = this.talkReq.filter((q) => q.until > t && t - (this.tagSaid[q.tag] ?? -1e9) >= (TALK_COOLDOWN[q.tag] || 0));
+        let tag = null;
+        if (!this.helloSaid) {
+          // say hello as soon as his voice has loaded (or give up after a few seconds)
+          if (this.helloBy == null) this.helloBy = t + 6;
+          if (this.pickTalk('hello')) { tag = 'hello'; this.helloSaid = true; }
+          else if (t > this.helloBy) this.helloSaid = true;
+          else return;
+        } else if (this.talkReq.length) tag = this.talkReq.pop().tag;
+        else if (t >= (this.nextLobby || 0)) tag = 'lobby';
+        if (!tag) return;
+        const clip = this.pickTalk(tag);
+        if (!clip) return;
+        this.say(t + (tag === 'hello' ? 0.6 : 0), clip, true); // in the lobby he talks to us
+        this.tagSaid[tag] = t;
+        this.nextLobby = t + clip.dur + 8 + this.r() * 8;
+        return;
+      }
       for (const ev of this.vplan.talk) {
         if (ev.bar !== this.bar || ev.k !== k) continue;
         const clip = this.pickTalk(ev.tag);
@@ -884,16 +916,144 @@
 
     scheduleUntil(tEnd) {
       while (this.nextTime < tEnd) {
+        if (this.jump && this.nextTime >= this.jump.at - 1e-4) this.doJump(this.nextTime);
         this.step(this.nextTime);
         this.nextTime += this.stepDur;
         if (++this.stepIdx >= 16) {
           this.stepIdx = 0;
           this.bar++;
+          if (this.lobby) {
+            const v = this.track.sections.find((sec) => sec.name === 'verse');
+            if (this.bar >= v.start + v.bars) this.bar = v.start;
+          }
           if (this.bar >= this.track.totalBars) {
             this.newTrack();
           }
         }
       }
+    }
+
+    // START in the opening scene: on the next beat, jump to the last two bars
+    // of the first build (the snare roll, the silent beat) so the drop lands
+    // as the car pulls away. Returns the drop's audio time.
+    launch() {
+      if (!this.ctx || !this.track) return null;
+      const T = this.track;
+      const b1 = T.sections.find((sec) => sec.name === 'build' && !sec.second);
+      const steps = (4 - (this.stepIdx % 4)) % 4;
+      const at = Math.max(this.nextTime + steps * this.stepDur, this.ctx.currentTime + 0.05);
+      this.jump = { bar: b1.start + b1.bars - 2, at };
+      this.lobby = false;
+      const dropAt = at + 32 * this.stepDur;
+      // the bar before the drop is the driver's
+      const slot = b1.start + b1.bars - 1, P = this.vplan;
+      if (P) {
+        P.talk = P.talk.filter((e) => e.bar !== slot);
+        P.hooks = P.hooks.filter((e) => e.bar !== slot);
+        if (P.robot) P.robot.dropIn = P.robot.dropIn.filter((e) => e.bar !== slot);
+      }
+      this.marks.push({ t: dropAt, type: 'track', track: T }); // "Now playing" as we roll
+      this.launchDrop = dropAt;
+      return dropAt;
+    }
+    doJump(t) {
+      const N = this.n, dur = this.stepDur * 32;
+      this.bar = this.jump.bar;
+      this.stepIdx = 0;
+      this.jump = null;
+      // what the build's first bar would have set up, squeezed into two bars
+      N.sweep.frequency.cancelScheduledValues(t);
+      N.sweep.frequency.setValueAtTime(1600, t);
+      N.sweep.frequency.exponentialRampToValueAtTime(16000, t + dur);
+      N.music.gain.cancelScheduledValues(t);
+      N.music.gain.setValueAtTime(0.75, t);
+      N.music.gain.linearRampToValueAtTime(0.95, t + dur - this.stepDur * 4);
+      this.riser(t, dur);
+      this.marks.push({ t, type: 'section', name: 'build', final: false, energy: 0.75 });
+    }
+    // His line to the camera, timed to end as the drop lands.
+    goLine(dropAt) {
+      if (!this.ctx || !this.vox || !this.vox.driver.length) return false;
+      const clip = this.pickTalk('go');
+      if (!clip) return false;
+      if (dropAt - clip.dur - 0.06 < this.ctx.currentTime - 0.3) return true; // too late now: let the drop speak
+      const at = Math.max(this.ctx.currentTime + 0.02, dropAt - clip.dur - 0.06);
+      this.say(at, clip, true, true);
+      return true;
+    }
+
+    // ---- the car: door, starter, engine ---------------------------------------------
+    sfxDoor(t, close) {
+      const c = this.ctx, N = this.n;
+      const src = c.createBufferSource(); src.buffer = this.white;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = close ? 900 : 2400; bp.Q.value = 1.2;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(close ? 0.5 : 0.25, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (close ? 0.12 : 0.06));
+      src.connect(bp).connect(g).connect(N.master);
+      src.start(t, Math.random()); src.stop(t + 0.2);
+      if (close) {
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.15);
+        const og = c.createGain();
+        og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.7, t + 0.006); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.connect(og).connect(N.master); o.start(t); o.stop(t + 0.25);
+      }
+    }
+    // Flat-12: the starter turns, it catches with a blip, then idles until we go.
+    engineStart(t) {
+      const c = this.ctx, N = this.n;
+      const out = c.createGain(); out.gain.value = 0;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 2;
+      const sh = c.createWaveShaper(); sh.curve = this.n.grit.curve;
+      const a = c.createOscillator(), b = c.createOscillator();
+      a.type = 'sawtooth'; b.type = 'square';
+      const f = [a.frequency, b.frequency];
+      a.connect(sh); b.connect(sh);
+      sh.connect(lp).connect(out).connect(N.master);
+      // starter: four uneven turns
+      for (let i = 0; i < 4; i++) {
+        const ti = t + i * 0.11;
+        out.gain.setValueAtTime(0.0001, ti);
+        out.gain.exponentialRampToValueAtTime(0.16, ti + 0.02);
+        out.gain.exponentialRampToValueAtTime(0.03, ti + 0.09);
+      }
+      f.forEach((p, k) => { p.setValueAtTime(26 * (k ? 0.5 : 1), t); });
+      // it catches: a blip of revs, then a lumpy idle
+      const tc = t + 0.46;
+      out.gain.setValueAtTime(0.05, tc);
+      out.gain.exponentialRampToValueAtTime(0.3, tc + 0.08);
+      out.gain.exponentialRampToValueAtTime(0.14, tc + 0.6);
+      f.forEach((p, k) => {
+        const m = k ? 0.5 : 1;
+        p.setValueAtTime(40 * m, tc);
+        p.exponentialRampToValueAtTime(115 * m, tc + 0.14);
+        p.exponentialRampToValueAtTime(46 * m, tc + 0.6);
+      });
+      lp.frequency.setValueAtTime(520, tc);
+      lp.frequency.exponentialRampToValueAtTime(1500, tc + 0.14);
+      lp.frequency.exponentialRampToValueAtTime(420, tc + 0.6);
+      a.start(t); b.start(t);
+      this.eng = { out, f, lp, a, b };
+    }
+    // ... and on the drop she goes
+    engineGo(t) {
+      const E = this.eng;
+      if (!E) return;
+      this.eng = null;
+      E.f.forEach((p, k) => {
+        const m = k ? 0.5 : 1;
+        p.cancelScheduledValues(t); p.setValueAtTime(48 * m, t);
+        p.exponentialRampToValueAtTime(190 * m, t + 0.7);
+        p.exponentialRampToValueAtTime(120 * m, t + 1.6);
+      });
+      E.lp.frequency.cancelScheduledValues(t); E.lp.frequency.setValueAtTime(600, t);
+      E.lp.frequency.exponentialRampToValueAtTime(2600, t + 0.6);
+      E.out.gain.cancelScheduledValues(t); E.out.gain.setValueAtTime(0.16, t);
+      E.out.gain.exponentialRampToValueAtTime(0.34, t + 0.35);
+      E.out.gain.exponentialRampToValueAtTime(0.0001, t + 2.6);
+      E.a.stop(t + 2.7); E.b.stop(t + 2.7);
     }
 
     chordAt(bar, prog) {
@@ -973,7 +1133,7 @@
       }
       // --- robot vocoder lines: sung on the chord, so always in tune
       const RB = this.vplan && this.vplan.robot;
-      if (RB && k === 0 && this.vox && this.vox.robots.length) {
+      if (RB && k === 0 && !this.lobby && this.vox && this.vox.robots.length) {
         for (const ev of RB.events) {
           if (ev.bar !== this.bar) continue;
           const clip = this.robotLine(ev.slot);
@@ -988,7 +1148,7 @@
         }
       }
       // --- noir: the deep robot and the woman who answers him
-      if (T.style === 'noir' && k === 0 && this.vox && this.vox.ready && this.vplan) {
+      if (T.style === 'noir' && k === 0 && !this.lobby && this.vox && this.vox.ready && this.vplan) {
         const NP = this.vplan.noir;
         for (const ev of NP.robo) {
           if (ev.bar !== this.bar) continue;

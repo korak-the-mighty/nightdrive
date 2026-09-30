@@ -156,6 +156,22 @@
     { "id": "drv-white-leather", "text": "Easy... the seats are white leather.", "tags": ["slow"], "style": "cool" },
     { "id": "drv-hair-minute", "text": "Red light? Good. The hair needs a minute.", "tags": ["stop"], "style": "aside" },
     { "id": "drv-blimp-jokes", "text": "Even the blimp's got jokes tonight.", "tags": ["blimp"], "style": "aside" },
-    { "id": "drv-blimp-talking", "text": "Is that blimp... talking to me?", "tags": ["blimp"], "style": "cool" }
+    { "id": "drv-blimp-talking", "text": "Is that blimp... talking to me?", "tags": ["blimp"], "style": "cool" },
+    { "id": "drv-hello-there", "text": "Oh... hey. Didn't see you there.", "tags": ["hello"], "style": "aside" },
+    { "id": "drv-hello-finally", "text": "There you are. Thought you'd never show.", "tags": ["hello"], "style": "aside" },
+    { "id": "drv-ready-to-roll", "text": "Ready to roll?", "tags": ["lobby"], "style": "aside" },
+    { "id": "drv-eighties-wont-wait", "text": "The eighties won't wait forever. [chuckles] Actually... they kind of will.", "tags": ["lobby"], "style": "aside" },
+    { "id": "drv-just-leaning", "text": "Don't mind me. Just leaning. Professionally.", "tags": ["lobby"], "style": "cool" },
+    { "id": "drv-youre-a-screen", "text": "I'd offer you a cigarette, but... you're a screen.", "tags": ["lobby"], "style": "aside" },
+    { "id": "drv-waiting-on-you", "text": "Car's clean. Hair's perfect. We're just waiting on you.", "tags": ["lobby"], "style": "cool" },
+    { "id": "drv-mullet-long", "text": "You know what they say. Life is short. The mullet is long.", "tags": ["lobby"], "style": "cool" },
+    { "id": "drv-nice-night", "text": "Nice night for a drive, huh?", "tags": ["lobby"], "style": "aside" },
+    { "id": "drv-push-the-button", "text": "Push the button, friend. The city's waiting.", "tags": ["lobby"], "style": "aside" },
+    { "id": "drv-night-is-young", "text": "Take your time. The night is young. The hair is timeless.", "tags": ["lobby"], "style": "cool" },
+    { "id": "drv-go-outta-here", "text": "Let's get outta here.", "tags": ["go"], "style": "cool" },
+    { "id": "drv-go-shoulder-pads", "text": "Hold on to your shoulder pads.", "tags": ["go"], "style": "hype" },
+    { "id": "drv-go-look-cool", "text": "Let's go look cool somewhere else.", "tags": ["go"], "style": "cool" },
+    { "id": "drv-go-dont-wait-up", "text": "Don't wait up.", "tags": ["go"], "style": "cool" },
+    { "id": "drv-go-everywhere", "text": "Next stop... everywhere.", "tags": ["go"], "style": "cool" }
   ]
 }

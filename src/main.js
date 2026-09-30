@@ -19,6 +19,10 @@
   // phones and tablets get touch controls
   const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
   if (touch) document.body.classList.add('touch');
+  ND.touch = touch;
+  ND.muted = params.has('mute');
+  // the opening scene (skip it with ?intro=0)
+  const introOn = params.get('intro') !== '0';
 
   // --- presentation: exact integer scale where possible, otherwise nearest
   // upscale to the next integer and a smooth downscale ("sharp bilinear").
@@ -165,7 +169,14 @@
     const now = performance.now();
     if (now - mphShown > 200) { toast(speedText()); mphShown = now; }
   }
+  // the opening scene: START sends him into the car
+  const lobby = () => world && world.intro && world.intro.lobby;
+  function launch() {
+    startSound();
+    world.intro.start(music);
+  }
   function pedal(v) {
+    if (world && world.intro && world.intro.active) { if (v > 0 && lobby()) launch(); return; } // no pedal until we roll
     world.pedal = v;
     startSound();
     showSpeed();
@@ -184,6 +195,11 @@
     // browser shortcuts (⌘R / Ctrl+R reload, ⌘L, ⌘M…) are the browser's, not ours:
     // ⌘R used to start a recording and flash the save dialog as the page reloaded
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (lobby() && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      launch();
+      return;
+    }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
       pedal(e.key === 'ArrowUp' ? 1 : -1);
@@ -196,7 +212,15 @@
     } else startSound();
     showHud();
   });
-  window.addEventListener('pointerdown', () => { startSound(); showHud(); });
+  window.addEventListener('pointerdown', (e) => {
+    // in the opening scene, the START button in the picture launches; anywhere else just turns the sound on
+    if (lobby() && e.target === screen) {
+      const b = screen.getBoundingClientRect();
+      if (world.intro.hits(((e.clientX - b.left) / b.width) * W, ((e.clientY - b.top) / b.height) * H)) { launch(); showHud(); return; }
+    }
+    startSound();
+    showHud();
+  });
 
   // --- touch controls: hold-to-press pedals, and a menu for everything else
   const menu = document.getElementById('menu');
@@ -264,14 +288,18 @@
 
   function boot() {
     const t0 = performance.now();
-    world = new ND.World(seed, { weather: params.get('weather') });
+    world = new ND.World(seed, { weather: params.get('weather'), intro: introOn });
     renderer = new ND.Renderer(world, { quality: params.get('q') != null ? +params.get('q') : undefined });
     ND.world = world;
     ND.renderer = renderer;
     // a fresh soundtrack every visit (so the first style is random too),
     // unless ?seed asks for a particular one
     const musicSeed = params.has('seed') ? seed : Math.floor(Math.random() * 1e9);
-    music = ND.music = new ND.Music(musicSeed, { style: params.get('style') });
+    music = ND.music = new ND.Music(musicSeed, { style: params.get('style'), lobby: !!world.intro });
+    if (world.intro) {
+      document.body.classList.add('intro');
+      ND.bus.on('intro-done', () => document.body.classList.remove('intro'));
+    }
     recorder = new ND.Recorder(params.get('rec') === '4k' ? 6 : params.get('rec') === '1440p' ? 4 : 3);
     recorder.onsaved = (name, streamed) => toast(streamed ? 'saved ' + name : 'downloading ' + name);
     // big moments: a drop during a storm brings the lightning with it
@@ -281,7 +309,7 @@
     });
     if (menu && (window.ND_PREVIEW || !recorder.supported())) menu.querySelector('[data-act="record"]').remove();
     if (touch && hintEl) hintEl.textContent = 'TAP FOR SOUND';
-    soundHint(!params.has('mute'));
+    soundHint(!params.has('mute') && !world.intro);
     resize();
     renderer.render();
     present();

@@ -82,6 +82,9 @@
       this.speed = this.speedTarget = SPEED;
       this.pedal = 0;
       this.speedZone = 'cruise';
+      // the opening scene: parked outside NIGHT DRIVE, engine off, him outside
+      this.parked = !!opts.intro;
+      if (this.parked) { this.speed = this.speedTarget = 0; this.speedZone = 'stop'; }
       this.jobs = new JobQueue();
       this.buildCache = new Map();
 
@@ -112,8 +115,15 @@
         spray: [],
         armOut: 1,   // 1 = arm out of the window, 0 = pulled inside
         window: 0,   // 0 = window down, 1 = up
+        // the opening scene switches these: is he in the car, shades on,
+        // engine and lights, the door, how much the car drifts in its lane
+        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 1, door: 0, seat: null,
+        drift: 1, armHoldUntil: 0, idleBob: 0, lookCam: false,
       };
+      if (this.parked) Object.assign(this.hero, { driverIn: false, shades: 0, engine: 0, lights: 0, pods: 0, drift: 0, armOut: 0, armHoldUntil: Infinity });
       this.fxr = ND.rng(seed + 333);
+      if (this.parked && !opts.weather) this.weather.hold = true;
+      this.intro = this.parked && ND.Intro ? new ND.Intro(this) : null;
       this.nextWalker = 0;
       this.nextCar = 0;
       this.initialPopulation();
@@ -194,8 +204,10 @@
         margin: 40,
         lookahead: 420,
         start: -30,
+        // the NIGHT DRIVE club stands right behind the car, where the night begins
         script: [
-          () => this.gapItem(240, 0),
+          () => this.gapItem(110, 0),
+          spawnSpec({ kind: 'nightdrive', key: 'nightdrive', seed: 1985, w: 420 }, 2),
           spawnSpec(heroBar(), 2),
           spawnSpec(heroHotel(), 0),
         ],
@@ -301,7 +313,9 @@
       }, {
         margin: 150,
         start: -60,
-        script: [palm(3, 70), lamp(2, 88), lamp(0, 106), palm(4, 78), lamp(1, 69), palm(0, 159), palm(1, 60)],
+        // the opening shot keeps the palms to the sides so nothing stands in
+        // front of the NIGHT DRIVE sign (screen x: offscreen, 612, 520, 190, 120, 30)
+        script: [palm(3, 56), palm(4, 80), lamp(2, 318), lamp(0, 54), palm(0, 74), palm(1, 60)],
       });
     }
 
@@ -359,6 +373,7 @@
 
     // --- the speed pedal ---------------------------------------------------------------
     pedalUpdate() {
+      if (this.parked) { this.speed = this.speedTarget = 0; return; }
       if (this.pedal > 0) this.speedTarget = Math.min(MAX_SPEED, this.speedTarget + 0.05);
       else if (this.pedal < 0) this.speedTarget = Math.max(0, this.speedTarget - 0.08);
       // the car has weight: it eases towards the target
@@ -388,6 +403,7 @@
         this.weather.update();
         this.rain.update(this.weather, D, this.hero, this.speed);
         this.air.update(this.tick, this.weather);
+        if (this.intro) this.intro.update();
       }
       for (const l of this.skyLayers) l.update(D);
       this.buildings.update(D);
@@ -434,9 +450,9 @@
       const hero = this.hero;
       hero.angle += this.speed / ND.HERO.WHEEL_R;
       const t = this.tick / 60;
-      hero.dx = Math.round(Math.sin(t * 0.13) * 5 + Math.sin(t * 0.041 + 1) * 7);
+      hero.dx = Math.round((Math.sin(t * 0.13) * 5 + Math.sin(t * 0.041 + 1) * 7) * hero.drift);
       const bump = ND.hash(Math.floor(this.tick / 97), 5) < 0.35 && this.tick % 97 < 6;
-      hero.bob = bump ? 1 : 0;
+      hero.bob = this.speed > 0.5 ? (bump ? 1 : 0) : hero.idleBob;
 
       // the driver's arm hangs out of the window and sways with the ride
       const sinceBump = this.tick % 97;
@@ -452,7 +468,7 @@
         }
       } else {
         hero.window = Math.max(0, hero.window - 1 / 80);
-        if (hero.window === 0 && hero.armOut < 1) {
+        if (hero.window === 0 && hero.armOut < 1 && hero.driverIn && this.tick >= hero.armHoldUntil) {
           hero.armOut = Math.min(1, hero.armOut + 1 / 24);
           if (hero.armOut === 1) ND.bus.emit('arm-out'); // the cigarette is back out
         }

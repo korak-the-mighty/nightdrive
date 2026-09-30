@@ -69,7 +69,7 @@
       if (this.lock) this.lock = this.phase;
     }
     update() {
-      if (!this.lock && --this.left <= 0) this.next();
+      if (!this.lock && !this.hold && --this.left <= 0) this.next(); // held clear during the opening scene
       const k = 1 / (60 * 7);
       for (const key of ['rain', 'storm', 'fog', 'cloud']) this.v[key] += (this.target[key] - this.v[key]) * k;
       // lightning

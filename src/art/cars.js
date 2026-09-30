@@ -114,9 +114,13 @@
     S: rgb('#f8c6a6'), s: rgb('#e49c7c'), z: rgb('#b06a54'), e: rgb('#c4705a'), n: rgb('#a8624e'),
     G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
     c: rgb('#e4f2ff'), w: rgb('#ffffff'), b: rgb('#96c2f0'), B: rgb('#5c80bc'),
-    l: rgb('#d07a6a'), T: rgb('#fff8ee'), m: rgb('#5a1a24'),
+    l: rgb('#d07a6a'), T: rgb('#fff8ee'), m: rgb('#5a1a24'), E: rgb('#2a1420'),
   };
   const DRIVER_O = [144, 5];
+
+  // Before the shades go on (the opening scene): eyes and brows instead.
+  const BARE = { 7: '..Sddssssshhhhdddk', 8: '.SSSEsssssehhhdddk', 9: '..SSSSssszeehhdddk' };
+  const BARE_CAM = { 7: 'khSddSSSSSddShdddk', 8: 'khSEESSSSSEEShdddk', 9: 'khSSSSSsSSSSShdddk' };
 
   function genDriver() {
     const w = DRIVER[0].length, h = DRIVER.length;
@@ -133,10 +137,28 @@
       });
       return pb.canvas();
     };
+    // the shades coming up from his hand to his eyes (lower rows first)
+    const slide = [4, 2].map((dy) => {
+      const over = Object.assign({}, BARE);
+      for (const r of [8, 9]) {
+        const shade = DRIVER[r], row = [...(over[r + dy] || DRIVER[r + dy])];
+        [...shade].forEach((ch, x) => { if (ch === 'G' || ch === 'g') row[x] = ch; });
+        over[r + dy] = row.join('');
+      }
+      // fingers holding the arm of the shades
+      const hr = [...(over[10 + dy] || DRIVER[10 + dy])];
+      hr[12] = 'S'; hr[13] = 'S';
+      over[10 + dy] = hr.join('');
+      return draw(DRIVER, over);
+    });
     return {
       c: draw(DRIVER),
       talk: DRIVER_TALK.map((o) => draw(DRIVER, o)),     // mouth half / fully open
       cam: DRIVER_CAM_TALK.map((o) => draw(DRIVER_CAM, o)), // facing us: closed, grin, open
+      bare: draw(DRIVER, BARE),
+      bareTalk: DRIVER_TALK.map((o) => draw(DRIVER, Object.assign({}, BARE, o))),
+      bareCam: DRIVER_CAM_TALK.map((o) => draw(DRIVER_CAM, Object.assign({}, BARE_CAM, o))),
+      slide,
       x: DRIVER_O[0], y: DRIVER_O[1],
     };
   }
@@ -378,6 +400,13 @@
 
     const body = ND.sprite(pb, gl);
     body.glowPts = { tail: [296, 34], front: [3, 46] };
+    // the same lamps switched off (engine off, in the opening scene)
+    const off = new ND.PB(HW, HH);
+    for (let y = 45; y <= 48; y++) for (let x = 1; x <= 6; x++) off.set(x, y, P(ND.mix(rgb('#8a6a4a'), rgb('#d8d0e4'), x < 3 ? 0.4 : 0)));
+    for (let x = 28; x <= 33; x++) { off.set(x, 46, P(rgb('#9a7a5a'))); off.set(x, 47, P(rgb('#6a5440'))); }
+    for (let y = 27; y <= 41; y++) for (let x = 293; x <= 298; x++) off.set(x, y, P((y - 27) % 3 === 2 ? rgb('#2a0a14') : ND.mix(rgb('#6a1a2a'), rgb('#a05a6a'), x > 296 ? 0.3 : 0)));
+    for (let x = 277; x <= 282; x++) off.set(x, 44, P(rgb('#5a1422')));
+    body.lampsOff = off.canvas();
 
     // Paint mask for live environment reflections: strongest on the upper
     // flank above the paint's horizon line, faint on the lower flank.

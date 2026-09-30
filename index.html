@@ -50,6 +50,8 @@
     #rotate { display: none; position: fixed; left: 0; right: 0; bottom: 120px; text-align: center; letter-spacing: .25em; color: #6ae0ff; }
     body.touch.portrait #rotate { display: block; }
     body.touch.portrait #soundhint { bottom: auto; top: calc(50% + 28vw + 18px); }
+    /* the opening scene draws its own prompt in the picture */
+    body.intro #hud, body.intro #soundhint, body.intro #pedals { display: none; }
   </style>
 </head>
 <body>
@@ -86,15 +88,18 @@
   <script src="src/art/sky.js"></script>
   <script src="src/art/skyline.js"></script>
   <script src="src/art/buildings.js"></script>
+  <script src="src/art/bigsign.js"></script>
   <script src="src/art/palms.js"></script>
   <script src="src/art/people.js"></script>
   <script src="src/art/cars.js"></script>
+  <script src="src/art/dude.js"></script>
   <script src="src/art/props.js"></script>
   <script src="src/weather.js"></script>
   <script src="src/fx.js"></script>
   <script src="assets/vocals/pack.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/recorder.js"></script>
+  <script src="src/intro.js"></script>
   <script src="src/world.js"></script>
   <script src="src/renderer.js"></script>
   <script src="src/main.js"></script>
