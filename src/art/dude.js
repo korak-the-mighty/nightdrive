@@ -286,7 +286,102 @@
   }
   const headCache = {};
 
+  // ---- side view, for walking to the door and getting in -------------------------
+  // A posed body facing left, in the car's coordinates. Pose: hip, shoulder,
+  // and for each limb the elbow/knee and hand/ankle; `inside` names the parts
+  // that are already in the car (drawn into a second layer the car clips to its
+  // doorway, so he slides in behind the bodywork instead of popping).
+  const PBOX = { x: 70, y: -44, w: 170, h: 150 };
+  const pbIn = new ND.PB(PBOX.w, PBOX.h), pbOut = new ND.PB(PBOX.w, PBOX.h);
+
+  function renderProfile(pose) {
+    pbIn.d.fill(0); pbOut.d.fill(0);
+    const ins = pose.inside || {};
+    const L = (part) => (ins[part] ? pbIn : pbOut);
+    const at = (p) => [p[0] - PBOX.x, p[1] - PBOX.y];
+    const H = at(pose.hip), S = at(pose.sh);
+    const u = [H[0] - S[0], H[1] - S[1]], ul = Math.hypot(u[0], u[1]) || 1;
+    u[0] /= ul; u[1] /= ul;
+    const f = [-u[1], u[0]]; // towards his front (left when upright)
+    const shade = (c, k) => ND.scale(c, k);
+    const leg = (lg, far) => {
+      const k = far ? 0.72 : 1;
+      const K = at(lg.knee), A = at(lg.ankle);
+      const pb = L(far ? 'farLeg' : 'thigh');
+      limb(pb, H, K, 4.6, 3.8, shade(C.pants, k), C.pantsDD);
+      const ps = L(far ? 'farLeg' : 'shin');
+      limb(ps, K, A, 3.6, 2.6, shade(C.pants, k), C.pantsDD);
+      ps.lineFn(K[0], K[1] + 1, A[0], A[1] - 3, (x, y) => ps.set(x, y, ND.pack(...shade(C.pantsD, k))));
+      // ankle and a loafer pointing forward (left)
+      ps.rect(Math.round(A[0]) - 1, Math.round(A[1]) - 1, 3, 2, ND.pack(...shade(C.skin, k)));
+      const fx = Math.round(A[0]), fy = Math.round(A[1]) + 1;
+      for (let y = 0; y < 3; y++) for (let x = -8 + (y === 0 ? 3 : 0); x <= 2; x++) {
+        const c = y === 2 ? C.sole : x === -8 || y === 0 ? C.shoeD : C.shoe;
+        ps.set(fx + x, fy + y - 1, ND.pack(...shade(c, k)));
+      }
+    };
+    const arm = (am, far) => {
+      const k = far ? 0.72 : 1;
+      const E = at(am.elbow), Hd = at(am.hand), Sx = far ? [S[0] + 2, S[1] + 1] : S;
+      const pb = L(far ? 'farArm' : 'arm');
+      limb(pb, Sx, E, 3.5, 3.0, shade(C.blazer, k), C.blazerDD);
+      pb.disc(E[0], E[1], 2.9, ND.pack(...shade(C.blazerL, k)));
+      pb.disc(E[0], E[1], 2.0, ND.pack(...shade(C.blazer, k)));
+      limb(pb, E, Hd, 2.2, 1.9, shade(C.skin, k), C.skinD);
+      pb.disc(Hd[0], Hd[1], 2.0, ND.pack(...shade(C.skin, k)));
+      if (!far) { const wx = E[0] + (Hd[0] - E[0]) * 0.8, wy = E[1] + (Hd[1] - E[1]) * 0.8; pb.set(Math.round(wx), Math.round(wy), ND.pack(...C.gold)); }
+    };
+    // back to front: far leg and arm, torso and head, near leg and arm
+    leg(pose.farLeg, true);
+    arm(pose.farArm, true);
+    const T = L('torso');
+    const torso = [
+      [S[0] + f[0] * 6, S[1] + f[1] * 6], [S[0] - f[0] * 6, S[1] - f[1] * 6],
+      [H[0] - f[0] * 6 + u[0] * 4, H[1] - f[1] * 6 + u[1] * 4], [H[0] + f[0] * 5 + u[0] * 3, H[1] + f[1] * 5 + u[1] * 3],
+      [S[0] + f[0] * 7 + u[0] * 12, S[1] + f[1] * 7 + u[1] * 12],
+    ];
+    T.polyFn(torso, (x, y) => {
+      const v = ((x - S[0]) * u[0] + (y - S[1]) * u[1]) / ul;
+      T.set(x, y, ND.pack(...ND.mix(C.blazer, C.blazerD, ND.clamp(v, 0, 1) * 0.5)));
+    });
+    // the open blazer shows a strip of tee down the chest
+    T.lineFn(S[0] + f[0] * 5 + u[0] * 2, S[1] + f[1] * 5 + u[1] * 2, S[0] + f[0] * 6 + u[0] * 16, S[1] + f[1] * 6 + u[1] * 16, (x, y) => { T.set(x, y, ND.pack(...C.tee)); T.set(x + 1, y, ND.pack(...C.tee)); });
+    T.rect(Math.round(S[0] - 2 + f[0] * 2), Math.round(S[1] - 4), 4, 5, ND.pack(...C.skin)); // neck
+    // head: the side map, its neck on top of the shoulders
+    const hp = headCanvas(SIDE, Object.assign({}, pose.blink ? SIDE_BLINK : {}, SIDE_MOUTH[pose.mouth || 0] || {}), pose.sway || 0, false);
+    const hx = Math.round(S[0] + f[0] * 1.5 - 9), hy = Math.round(S[1] - 20);
+    L('head').blit(hp, hx, hy);
+    leg(pose.nearLeg, false);
+    arm(pose.nearArm, false);
+    // light: outside he catches the sign (pink on top, cyan behind); inside the
+    // cabin is darker and there's no outline
+    for (const [pb, inside] of [[pbOut, false], [pbIn, true]]) {
+      const src = pb.d.slice(), w = pb.w, h = pb.h;
+      const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && src[y * w + x] >>> 24;
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+          const i = y * w + x;
+          if (!(src[i] >>> 24)) {
+            if (!inside && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) pb.set(x, y, ND.pack(C.ink[0], C.ink[1], C.ink[2], 200));
+            continue;
+          }
+          let c = [src[i] & 255, (src[i] >> 8) & 255, (src[i] >> 16) & 255];
+          if (inside) c = ND.mix(ND.scale(c, 0.78), [120, 70, 160], 0.12);
+          else {
+            if (!on(x, y - 1)) c = ND.mix(c, [255, 120, 220], 0.5);
+            if (!on(x + 1, y)) c = ND.mix(c, [90, 230, 255], 0.35);
+            if (!on(x - 1, y)) c = ND.mix(c, [255, 110, 210], 0.25);
+            c = ND.mix(c, [150, 110, 220], 0.08);
+          }
+          pb.set(x, y, ND.pack(c[0], c[1], c[2]));
+        }
+    }
+    const out = { box: PBOX, inC: pbIn.isEmpty() ? null : pbIn.canvas(), outC: pbOut.isEmpty() ? null : pbOut.canvas() };
+    return out;
+  }
+
   ND.genDude = genDude;
+  ND.renderDudeProfile = renderProfile;
   ND.drawDudeHead = drawHead;
   ND.DUDE_PAL = PAL;
   ND.DUDE = { W: DW, H: DH, FOOT, HX, HY };

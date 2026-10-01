@@ -18,10 +18,12 @@ tubes, DRIVE in chrome, chasing marquee bulbs, neon palms and two searchlights
 sweeping the sky. It buzzes on letter by letter, and its light washes over the
 car. Our man leans on the car, smoking, looking around and talking to you now
 and then ("I'd offer you a cigarette, but... you're a screen."), while the
-music holds an inviting groove. Press START and he flicks the cigarette, gets
-in, fires her up (pop-up headlights and all), puts the shades on and says his
-line to the camera. The car pulls away exactly as the music drops, about five
-seconds after you pressed START.
+music holds an inviting groove. Press START and he flicks the cigarette, walks
+to the door, opens it, ducks in, swings his legs in and shuts it. He fires her
+up (pop-up headlights and all), puts the shades on, turns to the camera, lights
+a cigarette with a chrome lighter, blows out the smoke and says his line. The
+car pulls away exactly as the music drops, about eight seconds after START (the
+music jumps into its build-up so the drop lands right there).
 
 The strip doesn't take itself too seriously. About a third of the neon is a
 gag: the MIAMI NICE and GATOR ARMS hotels, SYNTH & TONIC and CROCKETT'S,
@@ -210,7 +212,9 @@ standard 16:9 size, so pixels stay perfectly square and crisp: 2× for 720p,
   drawn from pixel maps so it can look around, blink, talk and let the mullet
   blow in the wind).
 - `src/intro.js`: the opening scene: his idle behaviour, the START prompt,
-  and the launch sequence, stretched to land on the music's drop.
+  and the launch sequence. Getting in is a jointed side-view figure (dude.js)
+  blended between key poses, drawn partly in front of the car and partly
+  inside it, behind the doorway, so he slides in without popping.
 - `src/fx.js`: the volumetric lamp cones, headlight beams, film grain, umbrellas,
   and aircraft (planes, a helicopter with a searchlight, and the blimp with
   its scrolling LED sign).

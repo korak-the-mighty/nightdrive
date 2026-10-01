@@ -709,7 +709,7 @@
         this.n.dl.delayTime.setValueAtTime(this.stepDur * 3, Math.max(t, this.nextTime || t));
         this.n.dr.delayTime.setValueAtTime(this.stepDur * 3, Math.max(t, this.nextTime || t));
       }
-      if (!this.lobby) this.marks.push({ t: this.nextTime || 0, type: 'track', track: T });
+      if (!this.lobby) this.mark({ t: this.nextTime || 0, type: 'track', track: T });
       this.emit('track', T);
       this.vplan = this.planVocals(T);
     }
@@ -933,18 +933,21 @@
       }
     }
 
-    // START in the opening scene: on the next beat, jump to the last two bars
-    // of the first build (the snare roll, the silent beat) so the drop lands
-    // as the car pulls away. Returns the drop's audio time.
-    launch() {
+    // START in the opening scene: on the next beat, jump into the first build
+    // (its snare roll, the silent beat) so the drop lands as the car pulls
+    // away, no earlier than minAt. Returns the drop's audio time.
+    launch(minAt) {
       if (!this.ctx || !this.track) return null;
       const T = this.track;
       const b1 = T.sections.find((sec) => sec.name === 'build' && !sec.second);
       const steps = (4 - (this.stepIdx % 4)) % 4;
       const at = Math.max(this.nextTime + steps * this.stepDur, this.ctx.currentTime + 0.05);
-      this.jump = { bar: b1.start + b1.bars - 2, at };
+      // as many bars of the build as it takes for the drop to land after minAt
+      const bar = 16 * this.stepDur;
+      const n = ND.clamp(Math.ceil((minAt - at) / bar - 1e-6), 2, b1.bars);
+      this.jump = { bar: b1.start + b1.bars - n, at, n };
       this.lobby = false;
-      const dropAt = at + 32 * this.stepDur;
+      const dropAt = at + n * bar;
       // the bar before the drop is the driver's
       const slot = b1.start + b1.bars - 1, P = this.vplan;
       if (P) {
@@ -952,16 +955,16 @@
         P.hooks = P.hooks.filter((e) => e.bar !== slot);
         if (P.robot) P.robot.dropIn = P.robot.dropIn.filter((e) => e.bar !== slot);
       }
-      this.marks.push({ t: dropAt, type: 'track', track: T }); // "Now playing" as we roll
+      this.titleAtDrop = true; // "Now playing" as we roll
       this.launchDrop = dropAt;
       return dropAt;
     }
     doJump(t) {
-      const N = this.n, dur = this.stepDur * 32;
+      const N = this.n, dur = this.stepDur * 16 * this.jump.n;
       this.bar = this.jump.bar;
       this.stepIdx = 0;
       this.jump = null;
-      // what the build's first bar would have set up, squeezed into two bars
+      // what the build's first bar would have set up, over the bars that are left
       N.sweep.frequency.cancelScheduledValues(t);
       N.sweep.frequency.setValueAtTime(1600, t);
       N.sweep.frequency.exponentialRampToValueAtTime(16000, t + dur);
@@ -969,13 +972,16 @@
       N.music.gain.setValueAtTime(0.75, t);
       N.music.gain.linearRampToValueAtTime(0.95, t + dur - this.stepDur * 4);
       this.riser(t, dur);
-      this.marks.push({ t, type: 'section', name: 'build', final: false, energy: 0.75 });
+      this.mark({ t, type: 'section', name: 'build', final: false, energy: 0.75 });
     }
     // His line to the camera, timed to end as the drop lands.
-    goLine(dropAt) {
+    goLine(dropAt, earliest) {
       if (!this.ctx || !this.vox || !this.vox.driver.length) return false;
-      const clip = this.pickTalk('go');
-      if (!clip) return false;
+      // a line that fits between his cigarette and the drop
+      const pool = this.vox.driver.filter((h) => h.tags.includes('go'));
+      if (!pool.length) return false;
+      const fit = pool.filter((h) => dropAt - h.dur - 0.06 >= earliest);
+      const clip = fit.length ? this.r.pick(fit) : pool.reduce((a, b) => (b.dur < a.dur ? b : a));
       if (dropAt - clip.dur - 0.06 < this.ctx.currentTime - 0.3) return true; // too late now: let the drop speak
       const at = Math.max(this.ctx.currentTime + 0.02, dropAt - clip.dur - 0.06);
       this.say(at, clip, true, true);
@@ -1077,14 +1083,15 @@
 
       // section starts: filter moves, marks for the visuals
       if (k === 0 && sb === 0) {
-        this.marks.push({ t, type: 'section', name: s.name, final: !!s.final, energy: s.energy });
+        this.mark({ t, type: 'section', name: s.name, final: !!s.final, energy: s.energy });
         if (s.name === 'drop') {
           this.impact(t, s.final ? 1.2 : 1);
           this.crash(t, 1);
           if (T.style === 'amiga' || T.style === 'electro') this.orch(t, voice(pcs.slice(0, 3), null, 55), s.final ? 1.1 : 0.95);
           N.sweep.frequency.cancelScheduledValues(t);
           N.sweep.frequency.setValueAtTime(18000, t);
-          this.marks.push({ t, type: 'drop', final: !!s.final });
+          this.mark({ t, type: 'drop', final: !!s.final });
+          if (this.titleAtDrop) { this.titleAtDrop = false; this.mark({ t, type: 'track', track: T }); }
         }
         if (s.name === 'break') {
           N.sweep.frequency.cancelScheduledValues(t);

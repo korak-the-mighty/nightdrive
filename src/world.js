@@ -470,7 +470,8 @@
         hero.window = Math.max(0, hero.window - 1 / 80);
         if (hero.window === 0 && hero.armOut < 1 && hero.driverIn && this.tick >= hero.armHoldUntil) {
           hero.armOut = Math.min(1, hero.armOut + 1 / 24);
-          if (hero.armOut === 1) ND.bus.emit('arm-out'); // the cigarette is back out
+          if (hero.armOut === 1 && !hero.armQuiet) ND.bus.emit('arm-out'); // the cigarette is back out
+          if (hero.armOut === 1) hero.armQuiet = false;
         }
       }
       // cigarette smoke, whisked back by the wind (car-local coordinates)

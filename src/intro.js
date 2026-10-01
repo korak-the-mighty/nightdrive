@@ -13,8 +13,44 @@
   const FOOT_Y = Y.CAR + 17;   // his feet on the road, just in front of the car
   const SEAT = [144, 5];       // where the driver's head sits, car-local
 
-  // The launch, in seconds from START (stretched to fit the music's drop).
-  const PH = { flick: 0, push: 0.28, walk: 0.46, door: 0.5, sit: 0.86, close: 1.22, ignite: 1.42, shades: 1.95, cam: 2.3 };
+  // The launch, in seconds from START. Getting in, the engine, the shades, a
+  // look at the camera and a cigarette all come first; his line ends on the
+  // drop, and the music jumps so the drop lands after all of it.
+  const TL = {
+    flick: 0, stand: 0.3, turn: 0.42, walkEnd: 0.95, doorOpen: 1.0, doorOpened: 1.4, reachEnd: 1.2,
+    stepEnd: 1.5, crouchEnd: 1.85, sitEnd: 2.2, swingMid: 2.42, swingEnd: 2.62, closeEnd: 2.92,
+    ignite: 3.0, catch: 3.46, shades: 3.8, shadesOn: 4.2, cam: 4.35,
+    lighter: 4.7, flame: 4.86, lit: 5.1, flameOut: 5.28, lighterDown: 5.46, puff: 5.62, line: 5.8,
+  };
+  const MIN_DROP = 7.9;   // seconds from START to the drop, at least
+  const STRIDE = 44;      // px of road per walk cycle
+
+  // --- side-view poses (car coordinates) ------------------------------------------
+  const P = (hip, sh, nk, na, fk, fa, ne, nh, fe, fh) => ({ hip, sh, nearLeg: { knee: nk, ankle: na }, farLeg: { knee: fk, ankle: fa }, nearArm: { elbow: ne, hand: nh }, farArm: { elbow: fe, hand: fh } });
+  const standAt = (x) => P([x, 36], [x - 1, 0], [x - 1, 64], [x, 92], [x + 2, 64], [x + 3, 92], [x + 1, 17], [x - 1, 33], [x + 3, 17], [x + 2, 33]);
+  function walkAt(x, ph) {
+    const bob = Math.abs(Math.sin(ph)) * 1.2;
+    const H = [x, 37 - bob], S = [x - 2, 1 - bob];
+    const leg = (p) => {
+      const a = 0.42 * Math.sin(p), b = 0.15 + 0.8 * Math.pow(Math.max(0, Math.cos(p - 0.35)), 2);
+      const K = [H[0] - 28 * Math.sin(a), H[1] + 28 * Math.cos(a)], s = a - b;
+      return { knee: K, ankle: [K[0] - 28 * Math.sin(s), K[1] + 28 * Math.cos(s)] };
+    };
+    const arm = (p, dx) => {
+      const au = -0.35 * Math.sin(p), af = au + 0.3;
+      const E = [S[0] + dx - 17 * Math.sin(au), S[1] + 17 * Math.cos(au)];
+      return { elbow: E, hand: [E[0] - 16 * Math.sin(af), E[1] + 16 * Math.cos(af)] };
+    };
+    return { hip: H, sh: S, nearLeg: leg(ph), farLeg: leg(ph + Math.PI), nearArm: arm(ph + Math.PI, 0), farArm: arm(ph, 2) };
+  }
+  const REACH = P([178, 36], [177, 0], [177, 64], [178, 92], [180, 64], [181, 92], [172, 16], [166, 31], [180, 17], [179, 33]);
+  const CROUCH = P([166, 47], [153, 16], [151, 66], [163, 92], [155, 67], [167, 92], [161, 8], [166, 2], [156, 31], [150, 42]);
+  const SIT_OUT = P([160, 56], [154, 25], [140, 62], [146, 92], [143, 63], [150, 92], [148, 40], [139, 24], [152, 40], [143, 26]);
+  const SWING = P([160, 56], [154, 25], [134, 50], [127, 70], [137, 51], [130, 71], [148, 40], [139, 23], [152, 40], [143, 25]);
+  const SEATED = P([160, 56], [154, 25], [128, 50], [118, 70], [131, 51], [121, 71], [147, 40], [139, 22], [151, 40], [142, 24]);
+  const ease = (t) => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => (Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * t) : typeof a === 'object' ? Object.fromEntries(Object.keys(a).map((k) => [k, lerp(a[k], b[k], t)])) : a + (b - a) * t);
+  const span = (t, a, b) => ND.clamp((t - a) / (b - a), 0, 1);
 
   class Intro {
     constructor(world) {
@@ -48,21 +84,20 @@
       if (this.state !== 'lobby') return;
       this.state = 'launch';
       this.music = music && music.ctx && music.enabled ? music : null;
-      let T = 3.4, dropAt = null;
+      let T = 8.0, dropAt = null, startCT = null;
       if (this.music) {
-        dropAt = this.music.launch();
-        if (dropAt != null) T = Math.max(2.4, dropAt - this.music.heard());
+        startCT = this.music.ctx.currentTime;
+        dropAt = this.music.launch(startCT + MIN_DROP);
+        if (dropAt != null) T = dropAt - this.music.heard();
       }
-      // the moves fit before his line; the line ends on the drop
-      const k = ND.clamp((T - 1.75) / PH.cam, 0.55, 1.35);
-      this.seq = { t0: this.tick, T, k, dropAt, said: false, done: {} };
+      this.seq = { t0: this.tick, T, dropAt, startCT, said: false, done: {} };
       ND.bus.emit('intro-launch');
     }
 
-    // seconds into the launch, and "has phase p begun" (once)
-    at(p) { return this.seq && (this.tick - this.seq.t0) / 60 >= PH[p] * this.seq.k; }
+    // seconds since START; "has moment p come" (once)
+    get t() { return this.seq ? (this.tick - this.seq.t0) / 60 : 0; }
     once(p) {
-      if (!this.at(p) || this.seq.done[p]) return false;
+      if (this.t < TL[p] || this.seq.done[p]) return false;
       this.seq.done[p] = true;
       return true;
     }
@@ -123,78 +158,116 @@
     }
 
     launchUpdate(mp) {
-      const w = this.w, h = w.hero, S = this.seq, r = this.r;
-      const t = (this.tick - S.t0) / 60, k = S.k;
+      const w = this.w, h = w.hero, S = this.seq, r = this.r, t = this.t;
       this.drag = null;
       this.view = 'cam';
-      if (this.once('flick')) { this.arm = 'flick'; }
-      if (this.at('flick') && !this.at('push') && (this.tick - S.t0) === Math.round(0.12 * 60 * k)) {
+      // --- on foot: flick the cigarette, stand up, turn up the street
+      if (t < TL.stand) this.arm = 'flick';
+      if (this.once('flick')) this.flickAt = this.tick + Math.round(0.12 * 60);
+      if (this.tick === this.flickAt) {
         const tip = this.tipWorld();
         if (tip) this.embers.push({ x: tip[0], y: tip[1], vx: -2.4, vy: -2.2, floor: FOOT_Y + 3, age: 0, life: 150 });
         this.cigGone = true;
       }
-      if (this.once('push')) { this.arm = 'down'; this.pose = 'stand'; this.lift = 1; }
-      if (this.at('walk') && !this.at('sit')) {
-        // a quick sidestep to the doorway
-        const u = ND.clamp((t - PH.walk * k) / ((PH.sit - PH.walk) * k), 0, 1);
-        this.walk = -Math.round(u * 54);
-        this.pose = Math.floor(u * 6) % 2 ? 'step' : 'stand';
-        this.view = 'left';
+      if (t >= TL.stand && t < TL.turn) { this.arm = 'down'; this.pose = 'stand'; this.lift = 1; if (t > TL.stand + 0.06) this.view = 'left'; }
+      // --- the side view: walk to the door, open it, get in
+      let pose = null, inside = null;
+      if (t >= TL.turn && t < TL.closeEnd) {
+        const ph = (x) => ((202 - x) / STRIDE) * Math.PI * 2;
+        if (t < TL.walkEnd) {
+          const x = 202 - 23 * span(t, TL.turn, TL.walkEnd);
+          pose = walkAt(x, ph(x));
+        } else if (t < TL.reachEnd) {
+          pose = lerp(walkAt(179, ph(179)), REACH, ease(span(t, TL.walkEnd, TL.reachEnd)));
+        } else if (t < TL.stepEnd) {
+          // one step into the doorway, near knee lifting over the sill
+          const u = span(t, TL.reachEnd, TL.stepEnd), lift = Math.sin(u * Math.PI);
+          pose = lerp(REACH, standAt(166), ease(u));
+          pose.nearLeg.knee = [pose.nearLeg.knee[0] - lift * 5, pose.nearLeg.knee[1] - lift * 5];
+          pose.nearLeg.ankle = [pose.nearLeg.ankle[0] - lift * 3, pose.nearLeg.ankle[1] - lift * 7];
+        } else if (t < TL.crouchEnd) {
+          pose = lerp(standAt(166), CROUCH, ease(span(t, TL.stepEnd, TL.crouchEnd)));
+        } else if (t < TL.sitEnd) {
+          pose = lerp(CROUCH, SIT_OUT, ease(span(t, TL.crouchEnd, TL.sitEnd)));
+        } else if (t < TL.swingMid) {
+          pose = lerp(SIT_OUT, SWING, ease(span(t, TL.sitEnd, TL.swingMid)));
+          inside = { torso: 1, head: 1, arm: 1, farArm: 1 };
+        } else {
+          pose = lerp(SWING, SEATED, ease(span(t, TL.swingMid, TL.swingEnd)));
+          inside = { torso: 1, head: 1, arm: 1, farArm: 1, thigh: 1, shin: 1, farLeg: 1 };
+        }
+        // he settles once he's in: a little bounce on the seat
+        if (t >= TL.sitEnd && t < TL.sitEnd + 0.2) pose.hip = [pose.hip[0], pose.hip[1] + Math.sin(span(t, TL.sitEnd, TL.sitEnd + 0.2) * Math.PI) * 1.5];
+        pose.inside = inside;
+        pose.blink = this.tick < this.blinkUntil;
+        pose.sway = this.sway;
+        this.profile = ND.renderDudeProfile(pose);
+        h.seat = this.profile.inC ? { c: this.profile.inC, box: this.profile.box } : null;
+      } else {
+        this.profile = null;
+        if (t >= TL.closeEnd) h.seat = null;
       }
-      if (this.once('door') && this.music) this.music.sfxDoor(this.sfxTime(), false);
-      if (this.at('door') && !this.at('close')) h.door = Math.min(1, h.door + 1 / (0.2 * 60 * k));
-      if (this.at('sit') && !this.at('close')) {
-        // he drops into the seat (drawn inside the car, through the doorway)
-        this.hidden = true;
-        const u = ND.clamp((t - PH.sit * k) / ((PH.close - PH.sit) * k), 0, 1), e = 1 - Math.pow(1 - u, 2);
-        h.seat = { x: SEAT[0] + 6 * (1 - e), y: SEAT[1] - 30 * (1 - e) };
-      }
-      if (this.at('close') && !this.at('ignite')) {
-        h.door = Math.max(0, h.door - 1 / (0.14 * 60 * k));
-        if (h.door === 0 && !h.driverIn) {
-          h.driverIn = true; h.seat = null;
+      this.hidden = t >= TL.turn;
+      // the door: he pulls it open, it swings shut behind him
+      if (this.once('doorOpen') && this.music) this.music.sfxDoor(this.sfxTime(), false);
+      if (t >= TL.doorOpen && t < TL.swingEnd) h.door = ease(span(t, TL.doorOpen, TL.doorOpened));
+      if (t >= TL.swingEnd) {
+        h.door = 1 - ease(span(t, TL.swingEnd, TL.closeEnd));
+        if (t >= TL.closeEnd && !h.driverIn) {
+          h.door = 0; h.driverIn = true; h.seat = null;
           if (this.music) this.music.sfxDoor(this.sfxTime(), true);
         }
       }
-      if (this.once('ignite')) {
-        h.door = 0; h.driverIn = true; h.seat = null;
-        if (this.music) this.music.engineStart(this.sfxTime());
-        this.igniteAt = this.tick;
-      }
-      if (this.igniteAt != null) {
-        const d = this.tick - this.igniteAt;
-        // the starter shakes her, she catches; lights flicker up, pods rise
+      // --- in the car: start her up
+      if (this.once('ignite') && this.music) this.music.engineStart(this.sfxTime());
+      if (t >= TL.ignite) {
+        const d = Math.round((t - TL.ignite) * 60);
         h.idleBob = d < 28 ? (d % 6 < 3 ? 1 : 0) : d < 40 ? (d % 4 < 2 ? 1 : 0) : 0;
-        if (d >= 28) {
-          h.lights = d < 40 ? (ND.hash(d, 77) < 0.6 ? 1 : 0.2) : 1;
+        if (t >= TL.catch) {
+          h.lights = t < TL.catch + 0.2 ? (ND.hash(d, 77) < 0.6 ? 1 : 0.2) : 1;
           h.engine = 1;
           h.pods = Math.min(1, h.pods + 1 / 12);
         }
-        if (d === 28) for (let i = 0; i < 9; i++) h.smoke.push({ x: 290 + r() * 3, y: 62 + r() * 2, vx: 0.4 + r() * 0.6, vy: -0.15 - r() * 0.25, age: 0, life: 40 + r() * 30, ph: r() * 6, exh: true });
+        if (this.once('catch')) for (let i = 0; i < 9; i++) h.smoke.push({ x: 290 + r() * 3, y: 62 + r() * 2, vx: 0.4 + r() * 0.6, vy: -0.15 - r() * 0.25, age: 0, life: 40 + r() * 30, ph: r() * 6, exh: true });
       }
-      if (this.at('shades')) h.shades = Math.min(1, h.shades + 1 / (0.3 * 60 * k));
-      if (this.at('cam') && !S.go) h.lookCam = true;
-      // his line, ending on the drop
-      if (!S.said && this.music && S.dropAt != null && this.at('shades')) S.said = this.music.goLine(S.dropAt);
+      // shades on, then a look at us
+      if (t >= TL.shades) h.shades = ease(span(t, TL.shades, TL.shadesOn));
+      if (t >= TL.cam && !S.go) h.lookCam = true;
+      // a cigarette: lighter up, flame, lit, a puff of smoke
+      if (t >= TL.lighter && t < TL.lighterDown) {
+        h.lighter = span(t, TL.lighter, TL.lighterDown);
+        h.flame = t >= TL.flame && t < TL.flameOut ? 0.7 + 0.3 * ND.noise(t * 30, 2.2, 9) : 0;
+      } else { h.lighter = null; h.flame = 0; }
+      if (t >= TL.lit && !S.go) h.cig = 'cam';
+      if (this.once('puff') && h.emberAt) {
+        const [mx, my] = [h.emberAt[0] - 4, h.emberAt[1] - 1];
+        for (let i = 0; i < 12; i++) h.smoke.push({ x: mx + r() * 2, y: my + r() * 2, vx: 0.2 + r() * 0.5, vy: -0.25 - r() * 0.3, age: 0, life: 50 + r() * 30, ph: r() * 6 });
+      }
+      if (h.cig && h.emberAt && this.tick % 4 === 0) h.smoke.push({ x: h.emberAt[0], y: h.emberAt[1] - 1, vx: 0.05 + r() * 0.1, vy: -0.3 - r() * 0.15, age: 0, life: 40 + r() * 20, ph: r() * 6 });
+      // his line, ending on the drop (once his voice is loaded and he's lit up)
+      if (!S.said && this.music && S.dropAt != null && t >= TL.cam) S.said = this.music.goLine(S.dropAt, S.startCT + TL.line);
       // the drop: she goes
       const goT = S.dropAt != null && this.music ? S.dropAt - this.music.heard() : S.T - t;
       if (!S.go && goT <= 0.02) {
         S.go = this.tick;
-        h.lookCam = false;
-        h.shades = 1; h.lights = 1; h.pods = 1; h.idleBob = 0;
+        h.shades = 1; h.lights = 1; h.pods = 1; h.idleBob = 0; h.lighter = null; h.flame = 0;
         w.parked = false;
         w.weather.hold = false;
         w.speedTarget = SPEED;
-        h.armHoldUntil = w.tick + 60 * 35; // a fresh cigarette comes out later
         if (this.music) this.music.engineGo(this.music.ctx.currentTime);
         if (ND.signState) ND.signState.surge = 0.6;
         for (let i = 0; i < 14; i++) h.smoke.push({ x: 290 + r() * 4, y: 61 + r() * 3, vx: 0.8 + r() * 1.4, vy: -0.2 - r() * 0.3, age: 0, life: 30 + r() * 30, ph: r() * 6, exh: true });
       }
       if (S.go) {
+        const since = (this.tick - S.go) / 60;
         // a proper launch, then the drift in the lane fades back in
         w.speed = Math.min(SPEED * 1.15, w.speed + 0.11);
         h.drift = Math.min(1, h.drift + 1 / 180);
-        if (this.tick - S.go > 60 * 1.2) {
+        // eyes back on the road, cigarette in his lips; then the arm goes out
+        if (since > 0.7) { h.lookCam = false; if (h.cig) h.cig = 'side'; }
+        if (since > 1.3 && !S.armOut) { S.armOut = true; h.armQuiet = true; h.armHoldUntil = w.tick; }
+        if (h.armOut > 0) h.cig = null;
+        if (since > 1.9) {
           this.state = 'done';
           h.drift = 1;
           ND.bus.emit('intro-done');
@@ -231,6 +304,14 @@
 
     // --- drawing -----------------------------------------------------------------------
     draw(R, rr) {
+      if (this.profile && this.profile.outC) {
+        // walking to the door and getting in: the parts of him still outside the car
+        const h = this.w.hero, P = this.profile;
+        const ox = Math.round(h.x + h.dx) + P.box.x, oy = h.y + P.box.y;
+        rr.reflect(P.outC, ox, FOOT_Y, 92 - P.box.y + 1, 0.3, R.t, 70);
+        R.c.drawImage(P.outC, ox, oy);
+        rr.occlude(P.outC, ox, oy);
+      }
       if (this.hidden || this.state === 'done') { this.drawEmbers(R); return; }
       const { c, g } = R;
       const D = this.D, fr = D.frames[this.frameName()];

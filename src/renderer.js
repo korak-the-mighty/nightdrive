@@ -696,10 +696,13 @@
       // the door, swung out towards us from its front hinge, and him getting in
       if (h.door > 0) {
         const th = h.door * 1.25, dw = Math.max(2, Math.round(67 * Math.cos(th))), b = h.bob;
+        // the cabin: a low sports seat in white leather, naturally
         cx.fillStyle = '#120c1e'; cx.fillRect(107, 27 + b, 66, 33);
-        cx.fillStyle = '#e4dcea'; cx.fillRect(147, 34 + b, 25, 13); // white leather, naturally
-        cx.fillStyle = '#b8aecc'; cx.fillRect(147, 45 + b, 25, 2);
-        cx.fillStyle = '#d6cee0'; cx.fillRect(161, 27 + b, 10, 8);
+        cx.fillStyle = '#1e1630'; cx.fillRect(107, 50 + b, 40, 7);
+        cx.fillStyle = '#e4dcea'; cx.fillRect(163, 27 + b, 9, 26);
+        cx.fillStyle = '#b8aecc'; cx.fillRect(163, 27 + b, 2, 26);
+        cx.fillStyle = '#e4dcea'; cx.fillRect(147, 50 + b, 25, 6);
+        cx.fillStyle = '#b8aecc'; cx.fillRect(147, 55 + b, 25, 1);
         cx.fillStyle = '#6a6488'; cx.fillRect(107, 57 + b, 66, 3);
         if (h.seat) this.drawSeat(cx, h);
         cx.drawImage(h.body.c, 106, 26, 68, 35, 106, 26 + b, dw, 35);
@@ -721,7 +724,11 @@
         else if (open) face = set.talk[open - 1];
         if (tk.cam && tk.left < 0 && tk.left > -0.3) nod = 1;
       }
-      if (h.driverIn) cx.drawImage(face, Dv.x, Dv.y + h.bob + nod);
+      if (h.driverIn) {
+        cx.drawImage(face, Dv.x, Dv.y + h.bob + nod);
+        if (h.cig || h.lighter != null) this.drawCig(R, cx, h, Dv.x, Dv.y + h.bob + nod, h.lookCam || (tk && tk.cam), tk ? tk.mouth : 0);
+        else h.emberAt = null;
+      }
       // window glass rolls up when it rains
       if (h.window > 0) {
         const top = Math.round(26 - h.window * 23);
@@ -814,20 +821,64 @@
       }
     }
 
+    // His cigarette (in the corner of his mouth, facing us or the road) and the
+    // lighter that lit it; the glows go into the emissive buffer.
+    drawCig(R, cx, h, fx, fy, cam, mouth) {
+      const px = (x, y, col) => { cx.fillStyle = col; cx.fillRect(fx + x, fy + y, 1, 1); };
+      const x0 = h.x + (h.dx || 0), y0 = h.y, g = this.g;
+      // the lighter's flame warms his face (and the cabin behind it)
+      if (h.lighter != null && cam && h.flame > 0) {
+        cx.globalCompositeOperation = 'source-atop';
+        cx.fillStyle = `rgba(255,150,60,${0.3 * h.flame})`;
+        cx.fillRect(fx - 4, fy, 22, 21);
+        cx.globalCompositeOperation = 'source-over';
+      }
+      if (h.cig) {
+        // facing us it hangs from the left corner of his mouth, against the dark
+        // cabin; in profile it points up the road
+        const dy = cam && mouth > 0.55 ? 1 : 0;
+        const pts = cam ? [[4, 14], [3, 14], [2, 15], [1, 15], [0, 16]] : [[0, 13], [-1, 13], [-2, 14], [-3, 14]];
+        pts.forEach(([x, y], i) => px(x, y + dy, i ? '#f8f4ec' : '#d8963c'));
+        const [ex, ey] = cam ? [-1, 16 + dy] : [-4, 14];
+        const hot = 0.55 + 0.45 * ND.noise(R.t * 7, 4.1, 3);
+        px(ex, ey, `rgb(255,${(120 + hot * 110) | 0},${(40 + hot * 60) | 0})`);
+        g.fillStyle = `rgba(255,120,40,${0.55 + hot * 0.45})`;
+        g.fillRect(x0 + fx + ex - 1, y0 + fy + ey - 1, 3, 3);
+        h.emberAt = [fx + ex, fy + ey];
+      }
+      if (h.lighter != null && cam) {
+        // the hand comes up from below with a chrome lighter, lid flipped open
+        const k = h.lighter, up = Math.round(Math.sin(Math.min(1, k * 1.25) * Math.PI) * 5);
+        const hy = 20 - up;
+        cx.fillStyle = '#8a4a3c'; cx.fillRect(fx - 3, fy + hy - 1, 8, 6);
+        cx.fillStyle = '#f0b494'; cx.fillRect(fx - 2, fy + hy, 6, 4);
+        cx.fillStyle = '#f8c6a6'; cx.fillRect(fx - 2, fy + hy, 3, 1);
+        cx.fillStyle = '#2a2436'; cx.fillRect(fx - 3, fy + hy - 5, 4, 5);
+        cx.fillStyle = '#eef0fa'; cx.fillRect(fx - 2, fy + hy - 4, 2, 4);
+        cx.fillStyle = '#9aa0c0'; cx.fillRect(fx - 1, fy + hy - 4, 1, 4);
+        cx.fillStyle = '#c8ccdc'; cx.fillRect(fx - 4, fy + hy - 7, 2, 3);
+        if (h.flame > 0) {
+          px(-2, hy - 8, '#ffffff'); px(-2, hy - 7, '#fff2a0'); px(-1, hy - 7, '#ffb040'); px(-2, hy - 6, '#ff8a20');
+          g.globalAlpha = h.flame;
+          g.fillStyle = 'rgba(255,200,110,1)';
+          g.fillRect(x0 + fx - 4, y0 + fy + hy - 10, 5, 5);
+          g.fillStyle = 'rgba(255,130,40,0.6)';
+          g.fillRect(x0 + fx - 10, y0 + fy + hy - 18, 26, 20);
+          g.globalAlpha = 1;
+        }
+      }
+    }
+
     // Him getting into the seat while the door is open: the bare-eyed driver
     // head with his blazer below it, seen through the window and the doorway.
     drawSeat(cx, h) {
-      const st = h.seat, Dv = h.driver, b = h.bob;
+      const st = h.seat, b = h.bob;
       cx.save();
       cx.beginPath();
       cx.moveTo(114.5, 26 + b); cx.lineTo(144.5, 4 + b); cx.lineTo(173, 4 + b); cx.lineTo(173, 26 + b); cx.closePath();
       if (h.door > 0) cx.rect(107, 26 + b, 66, 31);
       cx.clip();
-      const hx = Math.round(st.x), hy = Math.round(st.y) + b;
-      cx.fillStyle = '#8fb8f0'; cx.fillRect(hx + 3, hy + 20, 13, 24);
-      cx.fillStyle = '#5474b4'; cx.fillRect(hx + 13, hy + 20, 3, 24);
-      cx.fillStyle = '#f0ece4'; cx.fillRect(hx - 10, hy + 38, 18, 7);
-      cx.drawImage(Dv.bare, hx, hy);
+      cx.drawImage(st.c, st.box.x, st.box.y + b);
       cx.restore();
     }
 
