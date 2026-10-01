@@ -13,7 +13,7 @@
   const hud = document.getElementById('hud');
   const stats = document.getElementById('stats');
 
-  let world, renderer, music, recorder;
+  let world, renderer, music, recorder, radio;
   let paused = params.has('paused');
 
   // phones and tablets get touch controls
@@ -205,6 +205,14 @@
       pedal(e.key === 'ArrowUp' ? 1 : -1);
       return;
     }
+    // the car stereo: left and right change station
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      startSound();
+      if (radio && !(world.intro && world.intro.active)) radio.step(e.key === 'ArrowRight' ? 1 : -1);
+      showHud();
+      return;
+    }
     const act = KEYS[e.key.length === 1 ? e.key.toLowerCase() : ''];
     if (act) {
       if (e.key === ' ') e.preventDefault();
@@ -311,6 +319,7 @@
     if (touch && hintEl) hintEl.textContent = 'TAP FOR SOUND';
     soundHint(!params.has('mute') && !world.intro);
     resize();
+    if (ND.Radio) radio = new ND.Radio({ music, screen, power: () => ACTIONS.music(), toast });
     renderer.render();
     present();
     document.body.classList.add('ready');

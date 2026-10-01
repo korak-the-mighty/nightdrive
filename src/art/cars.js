@@ -747,7 +747,7 @@
     if (special === 'police') {
       for (let y = Math.ceil(belt) + 1; y < rocker - 1; y++) for (let x = n(52); x < n(112); x++) if (!inArch(x, y) && y !== trim && y !== trim + 1) pb.set(x, y, P(ND.scale(rgb('#eeeef4'), 1.05 - (y - belt) * 0.016)));
       const mk = ND.textMask('POLICE', { small: true, gap: 1 });
-      for (let y = 0; y < mk.h; y++) for (let x = 0; x < mk.w; x++) if (mk.m[y * mk.w + x]) pb.set(n(58) + x, Math.ceil(belt) + 3 + y, P(rgb('#16161e')));
+      for (let y = 0; y < mk.h; y++) for (let x = 0; x < mk.w; x++) if (mk.m[y * mk.w + x]) pb.set(n(58) + (opts.mirrorText ? mk.w - 1 - x : x), Math.ceil(belt) + 3 + y, P(rgb('#16161e')));
       bar = { x: n(73), y: roofRow - 4, w: 26, h: 4 };
       pb.rect(bar.x, bar.y, bar.w, bar.h, P(rgb('#2a2a3a')));
       chrome(n(58), n(15)); chrome(n(58) + 1, n(15)); // A-pillar spotlight
@@ -794,6 +794,7 @@
   ND.genDriverArm = genDriverArm;
   ND.genWheelFrames = genWheelFrames;
   ND.genTraffic = genTraffic;
+  ND.genTrafficWheels = genTrafficWheels;
   ND.HERO = { W: HW, H: HH, WHEELS, WHEEL_R, topY };
   ND.TRAFFIC = { W: TW, H: TH };
 })();

@@ -122,6 +122,11 @@
       this.carX = ND.ctx(this.carC);
       this.trafC = ND.canvas(ND.TRAFFIC.W, ND.TRAFFIC.H);
       this.trafX = ND.ctx(this.trafC);
+      // oncoming cars are composed at their own size, then flipped and scaled
+      this.oncA = ND.canvas(420, 110);
+      this.oncAX = ND.ctx(this.oncA);
+      this.oncB = ND.canvas(600, 160);
+      this.oncBX = ND.ctx(this.oncB);
 
       this.road = makeRoadTexture(world.seed + 3);
       this.walk = makeSidewalkTexture(world.seed + 4);
@@ -246,6 +251,7 @@
       if (this.q >= 2) this.drawRain(R, [0, 1, 3], 'back');
       this.drawHero(R);
       if (w.intro) w.intro.draw(R, this); // the man himself, leaning on the car
+      this.drawOncoming(R);
       this.drawRain(R, this.q >= 2 ? [2, 3] : [0, 1, 2, 3], this.q >= 2 ? 'front' : null);
       this.drawForeground(R);
       this.drawMist(R, 'front');
@@ -631,6 +637,70 @@
         this.g.fillStyle = 'rgba(255,30,50,0.35)';
         this.g.fillRect(x + S.w - 6, Y.FAR + 2, 5, 22);
       }
+    }
+
+    // Oncoming traffic, flashing past in front of us behind the bushes: mirrored
+    // to face right, drawn bigger (they're closer), a touch shadowed and
+    // smeared by speed so they never steal the show.
+    drawOncoming(R) {
+      const w = this.world;
+      if (!w.oncoming.length) return;
+      const { c, g } = R, f = ND.fAt(Y.ONC), K = ND.ONC_SCALE;
+      const a = this.oncAX, b = this.oncBX;
+      for (const o of w.oncoming) {
+        const S = o.sp, dw = Math.round(S.w * K), dh = Math.round(S.h * K);
+        // never let anything tall (a ladder, a giant cone) rise over our car: sink it a little
+        const sink = Math.max(0, Y.CAR - 2 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
+        const x = Math.round(CX + (R.D - o.P) * f), y = Y.ONC - Math.round(S.ground * K) + sink;
+        if (x > W + 20 || x + dw < -40) continue;
+        a.clearRect(0, 0, S.w + 2, S.h + 2);
+        a.drawImage(S.body.c, 0, 0);
+        const fr = 3 - (Math.floor(o.wa) % 4);
+        const R0 = S.wheelR || 13;
+        for (const [wx, wy] of S.wheels) a.drawImage(S.wheelFrames[fr], wx - R0, wy - R0);
+        if (S.anim) S.anim(a, R.t, o);
+        b.clearRect(0, 0, dw + 2, dh + 2);
+        b.save(); b.translate(dw, 0); b.scale(-1, 1);
+        b.drawImage(this.oncA, 0, 0, S.w, S.h, 0, 0, dw, dh);
+        b.restore();
+        b.globalCompositeOperation = 'source-atop';
+        b.fillStyle = 'rgba(14,6,34,0.42)';
+        b.fillRect(0, 0, dw, dh);
+        b.globalCompositeOperation = 'source-over';
+        // the beams ahead of it (to the right) light the wet road and the haze
+        const fx = this.fx, hy = y + Math.round((S.lampY || 30) * K);
+        c.save(); c.globalCompositeOperation = 'lighter';
+        c.translate(x + dw, 0); c.scale(-1, 1);
+        c.globalAlpha = o.hi ? 0.75 : 0.45;
+        c.drawImage(fx.tBeamGround, -128, Y.ONC - 8);
+        c.globalAlpha = (0.08 + 0.4 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * (o.hi ? 2 : 1);
+        c.drawImage(fx.tBeamAir, -128, hy - 9);
+        c.restore();
+        // speed: two faint ghosts trailing behind, then the car itself
+        c.globalAlpha = 0.16; c.drawImage(this.oncB, 0, 0, dw, dh, x - 16, y, dw, dh);
+        c.globalAlpha = 0.3; c.drawImage(this.oncB, 0, 0, dw, dh, x - 8, y, dw, dh);
+        c.globalAlpha = 1; c.drawImage(this.oncB, 0, 0, dw, dh, x, y, dw, dh);
+        g.globalCompositeOperation = 'destination-out';
+        g.drawImage(this.oncB, 0, 0, dw, dh, x, y, dw, dh);
+        g.globalCompositeOperation = 'lighter';
+        // its lamps: headlights now at the right end, tail lights at the left
+        if (S.body.g) {
+          g.save(); g.translate(x + dw, y); g.scale(-1, 1);
+          g.globalAlpha = 0.9;
+          g.drawImage(S.body.g, 0, 0, S.w, S.h, 0, 0, dw, dh);
+          g.restore();
+        }
+        g.fillStyle = o.hi ? 'rgba(255,250,225,0.95)' : 'rgba(255,240,200,0.7)';
+        g.fillRect(x + dw - 6, hy - 3, 10, 7);
+        if (S.flash) for (const fl of S.flash) {
+          const on = Math.floor(R.t * (fl.rate || 6) + (fl.ph || 0)) % 2 === 0;
+          if (!on) continue;
+          const fx0 = x + dw - Math.round((fl.x + fl.w) * K), fy0 = y + Math.round(fl.y * K);
+          c.fillStyle = fl.col; c.fillRect(fx0, fy0, Math.round(fl.w * K), Math.round(fl.h * K));
+          g.fillStyle = fl.col; g.fillRect(fx0 - 4, fy0 - 4, Math.round(fl.w * K) + 8, Math.round(fl.h * K) + 8);
+        }
+      }
+      g.globalAlpha = 1;
     }
 
     drawHero(R) {
