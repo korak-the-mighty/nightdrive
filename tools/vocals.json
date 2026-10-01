@@ -172,6 +172,20 @@
     { "id": "drv-go-shoulder-pads", "text": "Hold on to your shoulder pads.", "tags": ["go"], "style": "hype" },
     { "id": "drv-go-look-cool", "text": "Let's go look cool somewhere else.", "tags": ["go"], "style": "cool" },
     { "id": "drv-go-dont-wait-up", "text": "Don't wait up.", "tags": ["go"], "style": "cool" },
-    { "id": "drv-go-everywhere", "text": "Next stop... everywhere.", "tags": ["go"], "style": "cool" }
+    { "id": "drv-go-everywhere", "text": "Next stop... everywhere.", "tags": ["go"], "style": "cool" },
+    { "id": "drv-oc-fire-hotter", "text": "Somebody's having a hotter night than me.", "tags": ["oc-fire"], "style": "aside" },
+    { "id": "drv-oc-fire-dog", "text": "Love the dog. Hate the overtime.", "tags": ["oc-fire"], "style": "aside" },
+    { "id": "drv-oc-amb-hang", "text": "Hang in there, buddy.", "tags": ["oc-ambulance"], "style": "cool" },
+    { "id": "drv-oc-amb-pace", "text": "Somebody partied a little too hard.", "tags": ["oc-ambulance"], "style": "aside" },
+    { "id": "drv-oc-chase-boys", "text": "Go get 'em, boys. Wait... not me, right?", "tags": ["oc-chase"], "style": "hype" },
+    { "id": "drv-oc-chase-red", "text": "Red sports car, cops on its tail. Classic Tuesday.", "tags": ["oc-chase"], "style": "aside" },
+    { "id": "drv-oc-ice-respect", "text": "Ice cream at two a.m.? Respect.", "tags": ["oc-icecream"], "style": "aside" },
+    { "id": "drv-oc-ice-sprinkles", "text": "Hey! Save me a rocket pop!", "tags": ["oc-icecream"], "style": "hype" },
+    { "id": "drv-oc-dog-wait", "text": "Was that a hot dog... on a car?", "tags": ["oc-hotdog"], "style": "aside" },
+    { "id": "drv-oc-dog-hungry", "text": "Now I'm hungry. Thanks a lot.", "tags": ["oc-hotdog"], "style": "cool" },
+    { "id": "drv-oc-limo-prom", "text": "Prom night. Or a dentist convention.", "tags": ["oc-limo"], "style": "aside" },
+    { "id": "drv-oc-limo-long", "text": "Still passing... still passing... okay.", "tags": ["oc-limo"], "style": "aside" },
+    { "id": "drv-oc-party-now", "text": "Now that's a party!", "tags": ["oc-party"], "style": "hype" },
+    { "id": "drv-oc-party-hair", "text": "That's a lotta hairspray in one car.", "tags": ["oc-party"], "style": "aside" }
   ]
 }

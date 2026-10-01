@@ -50,6 +50,11 @@
     #rotate { display: none; position: fixed; left: 0; right: 0; bottom: 120px; text-align: center; letter-spacing: .25em; color: #6ae0ff; }
     body.touch.portrait #rotate { display: block; }
     body.touch.portrait #soundhint { bottom: auto; top: calc(50% + 28vw + 18px); }
+    /* the car stereo, in the corner of the picture */
+    #radio { position: fixed; z-index: 2; image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; transition: opacity .6s; touch-action: none; display: none; }
+    body.ready #radio { display: block; }
+    body.idle #radio { opacity: .35; }
+    body.nohud #radio, body.intro #radio { display: none; }
     /* the opening scene draws its own prompt in the picture */
     body.intro #hud, body.intro #soundhint, body.intro #pedals { display: none; }
   </style>
@@ -57,7 +62,7 @@
 <body>
   <canvas id="screen" width="640" height="360"></canvas>
   <div id="loading">BUILDING THE CITY…</div>
-  <div id="hud"><b>↑↓</b> speed · <b>F</b> fullscreen · <b>M</b> music · <b>N</b> next track · <b>R</b> record · <b>W</b> weather · <b>L</b> letterbox · <b>T</b> titles · <b>V</b> driver talk · <b>H</b> hide hints · <b>Space</b> pause</div>
+  <div id="hud"><b>↑↓</b> speed · <b>F</b> fullscreen · <b>M</b> music · <b>←→</b> radio · <b>N</b> next track · <b>R</b> record · <b>W</b> weather · <b>L</b> letterbox · <b>T</b> titles · <b>V</b> driver talk · <b>H</b> hide hints · <b>Space</b> pause</div>
   <div id="soundhint">CLICK OR PRESS ANY KEY FOR SOUND</div>
   <div id="rec">REC 0:00:00</div>
   <div id="toast"></div>
@@ -92,6 +97,7 @@
   <script src="src/art/palms.js"></script>
   <script src="src/art/people.js"></script>
   <script src="src/art/cars.js"></script>
+  <script src="src/art/vehicles.js"></script>
   <script src="src/art/dude.js"></script>
   <script src="src/art/props.js"></script>
   <script src="src/weather.js"></script>
@@ -99,6 +105,7 @@
   <script src="assets/vocals/pack.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/recorder.js"></script>
+  <script src="src/radio.js"></script>
   <script src="src/intro.js"></script>
   <script src="src/world.js"></script>
   <script src="src/renderer.js"></script>

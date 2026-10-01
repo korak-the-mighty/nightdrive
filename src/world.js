@@ -99,6 +99,8 @@
       this.makeForeground();
       this.walkers = [];
       this.traffic = [];
+      this.oncoming = [];
+      this.nextOncoming = 60 * 6;
       this.hero = {
         body: ND.genHeroCar(),
         wheels: ND.genWheelFrames(),
@@ -151,6 +153,10 @@
       for (let i = 0; i < 7; i++) this.trafficPool.push(ND.genTraffic(r.int(1, 1e9)));
       this.trafficPool.push(ND.genTraffic(77, { kind: 'coupe' }));
       this.trafficPool[0] = ND.genTraffic(99, { kind: 'coupe', color: [110, 16, 34] });
+      // oncoming cars: their own little pool, plus the specials
+      this.oncomingPool = [];
+      for (let i = 0; i < 8; i++) this.oncomingPool.push(ND.genTraffic(r.int(1, 1e9), { special: null }));
+      this.vehicles = ND.genVehicles ? ND.genVehicles(r.int(1, 1e9)) : {};
       this.lampHalo = ND.genHaloGlow(30, [255, 170, 80], 0.55);
       this.lampPool = ND.genPool(90, 18, [255, 170, 90], 0.55);
       this.spill = {};
@@ -372,6 +378,30 @@
       return true;
     }
 
+    // --- oncoming traffic: the lane in front of us, behind the bushes; they flash
+    // past going the other way. Mostly ordinary cars, now and then a special.
+    spawnOncoming(kind) {
+      const r = this.r, f = ND.fAt(Y.ONC), V = this.vehicles;
+      if (!kind) {
+        // mostly ordinary cars; a joke vehicle only now and then (never twice in a row)
+        const S = ND.ONCOMING_SPECIALS || {};
+        const specials = Object.keys(S).filter((k) => !S[k].follow && k !== this.lastSpecial);
+        const due = (this.sinceSpecial = (this.sinceSpecial || 0) + 1) >= 3;
+        kind = due && specials.length && r() < 0.28 ? r.pick(specials) : 'car';
+      }
+      const spec = (ND.ONCOMING_SPECIALS || {})[kind];
+      if (kind !== 'car') { this.sinceSpecial = 0; this.lastSpecial = kind; }
+      const sp = kind === 'car' ? r.pick(this.oncomingPool) : V[spec.sprite];
+      if (!sp) return;
+      const v = kind === 'car' ? r.range(3.4, 4.8) : spec.v;
+      const x0 = -sp.w * ND.ONC_SCALE - 24;
+      this.oncoming.push({ P: this.D - (x0 - CX) / f, v, sp, wa: 0, kind, born: this.tick, hi: kind === 'car' && r() < 0.12 });
+      // how long until it passes the middle of the screen, and how long it's on screen
+      const rel = (this.speed + v) * f * 60;
+      ND.bus.emit('oncoming', { kind, cross: (CX - x0 - sp.w * ND.ONC_SCALE / 2) / rel, dur: (W + sp.w * ND.ONC_SCALE) / rel, spec });
+      if (spec && spec.then) this.pendingOncoming = { kind: spec.then, at: this.tick + spec.gap };
+    }
+
     // --- the speed pedal ---------------------------------------------------------------
     pedalUpdate() {
       if (this.parked) { this.speed = this.speedTarget = 0; return; }
@@ -445,6 +475,21 @@
       if (!init && this.tick >= this.nextCar) {
         if (this.traffic.length < 2) this.spawnCar();
         this.nextCar = this.tick + this.r.int(420, 1400);
+      }
+
+      // oncoming traffic (not while we're parked for the opening scene)
+      const ocF = ND.fAt(Y.ONC);
+      for (const o of this.oncoming) { o.P -= o.v * (init ? 0 : 1); o.wa += o.v / 10; }
+      this.oncoming = this.oncoming.filter((o) => CX + (D - o.P) * ocF < W + 60);
+      if (!init && !this.parked && !(this.intro && this.intro.active)) {
+        if (this.pendingOncoming && this.tick >= this.pendingOncoming.at) {
+          const k = this.pendingOncoming.kind;
+          this.pendingOncoming = null;
+          this.spawnOncoming(k);
+        } else if (this.tick >= this.nextOncoming) {
+          this.spawnOncoming();
+          this.nextOncoming = this.tick + this.r.int(600, 1200); // every 10-20 s
+        }
       }
 
       // hero car: wheel spin, gentle suspension and drift

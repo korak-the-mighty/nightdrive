@@ -115,7 +115,8 @@
   const VOC_BANDS = 18, VOC_GAIN = 12, VOC_OUT = 0.75;
   // The driver won't bring the same subject up again for this long (seconds):
   // one lightning remark per storm, not one per strike.
-  const TALK_COOLDOWN = { lightning: 240, storm: 300, rain: 150, window: 400, clear: 150, mist: 150, heli: 200, blimp: 300, smoke: 300, fast: 60, slow: 60, stop: 90 };
+  const TALK_COOLDOWN = { lightning: 240, storm: 300, rain: 150, window: 400, clear: 150, mist: 150, heli: 200, blimp: 300, smoke: 300, fast: 60, slow: 60, stop: 90,
+    'oc-fire': 120, 'oc-ambulance': 120, 'oc-chase': 120, 'oc-icecream': 120, 'oc-hotdog': 120, 'oc-limo': 120, 'oc-party': 120 };
   // Talk box: first three formants of the vowels it "sings" through, and the
   // closed vowel every note opens from.
   const FORMANTS = { a: [730, 1090, 2440], e: [530, 1840, 2480], i: [300, 2200, 2950], o: [570, 840, 2410], u: [320, 800, 2240] };
@@ -383,7 +384,9 @@
       N.music.gain.value = 0.9;
       // the bed: everything but the vocals, dipped while the driver talks
       N.bed = ctx.createGain();
-      N.bed.connect(N.master);
+      // the car stereo's tuner: the music fades under static between stations
+      N.tuner = ctx.createGain();
+      N.bed.connect(N.tuner).connect(N.master);
       N.music.connect(N.duck).connect(N.sweep).connect(N.bed);
       N.lead = ctx.createGain();
       N.lead.gain.value = 0.9;
@@ -657,6 +660,10 @@
         if (tag) this.request(tag);
       });
       ND.bus.on('heli', () => this.request('heli', 20));
+      ND.bus.on('oncoming', (e) => {
+        this.passBy(e);
+        if (e.spec && e.spec.talk && this.r() < 0.75) this.request(e.spec.talk, 7);
+      });
       ND.bus.on('blimp', () => this.request('blimp', 30));
       ND.bus.on('arm-out', () => this.request('smoke'));
       ND.bus.on('window-up', () => this.request('window'));
@@ -905,6 +912,34 @@
       this.newTrack();
       this.nextTime = this.ctx.currentTime + 0.4;
     }
+    // the car stereo: static between stations (0 = locked on, 1 = nothing but hiss)...
+    tuner(level, f) {
+      if (!this.ctx) return;
+      const c = this.ctx, N = this.n, t = c.currentTime;
+      if (!N.static) {
+        const src = c.createBufferSource();
+        src.buffer = this.white; src.loop = true;
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.5;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 500;
+        N.static = c.createGain(); N.static.gain.value = 0;
+        src.connect(bp).connect(hp).connect(N.static).connect(N.master);
+        src.start();
+        // ...and the whistle of a carrier you're just off of
+        N.whistle = c.createOscillator(); N.whistle.type = 'sine';
+        N.whistleG = c.createGain(); N.whistleG.gain.value = 0;
+        N.whistle.connect(N.whistleG).connect(N.master);
+        N.whistle.start();
+      }
+      N.static.gain.setTargetAtTime(level * 0.2, t, 0.02);
+      N.tuner.gain.setTargetAtTime(1 - level * 0.94, t, 0.03);
+      N.whistle.frequency.setTargetAtTime(700 + ((f * 37) % 1) * 2600, t, 0.03);
+      N.whistleG.gain.setTargetAtTime(level > 0.05 && level < 0.9 ? 0.012 : 0, t, 0.03);
+    }
+    // ...and a station's own sound (null: NIGHT FM, all of them)
+    station(style) {
+      this.forceStyle = STYLES.includes(style) ? style : null;
+      if (this.ctx && !this.lobby) this.skip();
+    }
     on(fn) { this.listeners.push(fn); }
     emit(type, data) { for (const f of this.listeners) f(type, data); }
 
@@ -987,6 +1022,93 @@
       const at = Math.max(this.ctx.currentTime + 0.02, dropAt - clip.dur - 0.06);
       this.say(at, clip, true, true);
       return true;
+    }
+
+    // ---- oncoming traffic: whoosh, engine note and sirens, all doppler-shifted
+    // and panned left to right as they pass
+    passBy(e) {
+      if (!this.ctx || !this.enabled) return;
+      const c = this.ctx, N = this.n, t0 = c.currentTime + 0.02, tc = t0 + ND.clamp(e.cross, 0.1, 4), dur = ND.clamp(e.dur, 0.4, 8);
+      const pan = c.createStereoPanner();
+      pan.pan.setValueAtTime(-0.95, t0);
+      pan.pan.linearRampToValueAtTime(0.95, tc + (tc - t0));
+      pan.connect(N.amb);
+      const env = (g, peak, tail = 0.7) => {
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(peak, tc);
+        g.gain.exponentialRampToValueAtTime(0.0001, tc + dur * tail);
+      };
+      // tyres and air: noise through a band that rises, then falls away
+      const src = c.createBufferSource(); src.buffer = this.pink;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.7;
+      bp.frequency.setValueAtTime(420, t0);
+      bp.frequency.exponentialRampToValueAtTime(1700, tc);
+      bp.frequency.exponentialRampToValueAtTime(380, tc + dur * 0.6);
+      const g = c.createGain(); env(g, (e.spec && e.spec.loud) || 0.22);
+      src.connect(bp).connect(g).connect(pan);
+      src.start(t0, Math.random() * 3); src.stop(tc + dur);
+      // the engine's note drops as it goes by
+      const o = c.createOscillator(); o.type = 'sawtooth';
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380;
+      const base = (e.spec && e.spec.engine) || 92;
+      o.frequency.setValueAtTime(base * 1.07, t0);
+      o.frequency.setValueAtTime(base * 1.07, tc - 0.08);
+      o.frequency.exponentialRampToValueAtTime(base * 0.9, tc + 0.12);
+      const og = c.createGain(); env(og, 0.07);
+      o.connect(lp).connect(og).connect(pan);
+      o.start(t0); o.stop(tc + dur);
+      const sp = e.spec;
+      if (!sp) return;
+      // sirens: a wail, a yelp, or the fire truck's slow mechanical rise and its horn
+      if (sp.siren) {
+        const so = c.createOscillator(); so.type = sp.siren === 'fire' ? 'sawtooth' : 'square';
+        const sl = c.createBiquadFilter(); sl.type = 'lowpass'; sl.frequency.value = 2200;
+        const lfo = c.createOscillator(); lfo.type = sp.siren === 'yelp' ? 'triangle' : 'sine';
+        lfo.frequency.value = sp.siren === 'yelp' ? 3.6 : sp.siren === 'fire' ? 0.28 : 0.55;
+        const depth = c.createGain(); depth.gain.value = sp.siren === 'fire' ? 260 : 330;
+        lfo.connect(depth).connect(so.frequency);
+        const f0 = sp.siren === 'fire' ? 620 : 960;
+        so.frequency.setValueAtTime(f0 * 1.06, t0);
+        so.frequency.setValueAtTime(f0 * 1.06, tc - 0.1);
+        so.frequency.linearRampToValueAtTime(f0 * 0.93, tc + 0.15);
+        const sg = c.createGain();
+        sg.gain.setValueAtTime(0.0001, t0 - 0.5 > 0 ? t0 : t0);
+        sg.gain.exponentialRampToValueAtTime(0.07, tc);
+        sg.gain.exponentialRampToValueAtTime(0.0001, tc + dur * 1.4);
+        so.connect(sl).connect(sg).connect(pan);
+        so.start(t0); lfo.start(t0); so.stop(tc + dur * 1.5); lfo.stop(tc + dur * 1.5);
+        if (sp.siren === 'fire') {
+          for (const [dt, len] of [[-0.55, 0.22], [-0.25, 0.4]]) {
+            const hz = [176, 233].map((fq) => { const h = c.createOscillator(); h.type = 'square'; h.frequency.value = fq * (dt < 0 ? 1.05 : 0.95); return h; });
+            const hg = c.createGain(); hg.gain.setValueAtTime(0.0001, tc + dt); hg.gain.exponentialRampToValueAtTime(0.06, tc + dt + 0.02); hg.gain.setValueAtTime(0.06, tc + dt + len); hg.gain.exponentialRampToValueAtTime(0.0001, tc + dt + len + 0.05);
+            const hl = c.createBiquadFilter(); hl.type = 'lowpass'; hl.frequency.value = 1400;
+            for (const h of hz) { h.connect(hl); h.start(tc + dt); h.stop(tc + dt + len + 0.1); }
+            hl.connect(hg).connect(pan);
+          }
+        }
+      }
+      // tunes: the ice-cream jingle, the hot-dog van's, the party car's bass
+      if (sp.tune) {
+        const notes = sp.tune === 'party' ? [45, 0, 45, 52, 45, 0, 48, 50] : sp.tune === 'hotdog' ? [72, 76, 79, 76, 72, 74, 76, 72, 79, 77, 76, 74] : [79, 77, 76, 74, 72, 74, 76, 72, 77, 76, 74, 72, 74];
+        const step = sp.tune === 'party' ? 0.13 : 0.16;
+        const n0 = Math.max(0, Math.floor((tc - 1.0 - t0) / step));
+        for (let i = 0; i < 40; i++) {
+          const nt = t0 + i * step;
+          if (nt > tc + dur) break;
+          const m = notes[(i + n0) % notes.length];
+          if (!m) continue;
+          const no = c.createOscillator(); no.type = sp.tune === 'party' ? 'sawtooth' : 'triangle';
+          const dop = nt < tc ? 1.05 : 0.95;
+          no.frequency.value = 440 * Math.pow(2, (m - 69) / 12) * dop;
+          const ng = c.createGain();
+          const near = Math.max(0.05, 1 - Math.abs(nt - tc) / (dur * 0.8));
+          const pk = (sp.tune === 'party' ? 0.09 : 0.05) * near;
+          ng.gain.setValueAtTime(0.0001, nt); ng.gain.exponentialRampToValueAtTime(pk, nt + 0.01); ng.gain.exponentialRampToValueAtTime(0.0001, nt + step * 0.9);
+          if (sp.tune === 'party') { const pl = c.createBiquadFilter(); pl.type = 'lowpass'; pl.frequency.value = 600; no.connect(pl).connect(ng).connect(pan); }
+          else no.connect(ng).connect(pan);
+          no.start(nt); no.stop(nt + step);
+        }
+      }
     }
 
     // ---- the car: door, starter, engine ---------------------------------------------

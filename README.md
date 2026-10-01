@@ -33,6 +33,28 @@ MAYBE VACANCY. Every few minutes the tourist board's blimp drifts over the
 city, scrolling one-liners on its LED sign ("LOST: ONE ALLIGATOR. ANSWERS TO
 ELVIS"). It stays grounded in a storm.
 
+Oncoming traffic flashes past every 10–20 seconds in the lane in front of us,
+half hidden behind the median bushes (headlights first, with a whoosh that
+pans across the speakers). Most of it is ordinary cars. Now and then (never
+the same joke twice in a row) it's something else: a fire truck with a
+dalmatian riding along, an ambulance, a red sports car with a police cruiser
+right on its tail, an ice-cream van and a hot-dog van (each with a giant
+snack on the roof), a white stretch limo with someone
+waving out of the sunroof, or a pink convertible packed with big hair and a
+boombox. The jokes take it slow enough to read, and most bring a siren, an
+air horn or a jingle. The driver usually has something to say about them
+("Was that a hot dog... on a car?").
+
+The car stereo sits in the top-left corner (bottom-left on a phone): an 80s
+head unit with a glowing readout, a tuning band with a needle, and five
+presets. Each station plays one sound: **88.5 NOIR**, **92.3 ELECTRO**,
+**97.9 MIAMI**, **103.5 AMIGA**, and **107.7 NIGHT FM**, which mixes them all
+(it's where you start). Change station with `←` / `→`, the presets, the TUNE
+knob, the mouse wheel, or by dragging the needle along the band. Between
+stations there's static. The PWR knob turns the music on and off. The stereo
+fades back when you leave the mouse alone, `H` hides it, and it never shows
+up in a recording.
+
 ## Run it
 
 Open `index.html` in a browser. Double-clicking the file works (no server needed),
@@ -46,20 +68,22 @@ same thing bundled into one file you can copy anywhere (rebuild it with
 | `↑` / `↓` | Speed pedal: hold to accelerate or brake (all the way to a stop); let go to hold the speed. The music keeps its own tempo. |
 | `F` / double-click | Fullscreen |
 | `M` | Music on/off (sound starts with your first click or key press) |
-| `N` | Next track |
+| `←` / `→` | Car stereo: previous / next station |
+| `N` | Next track (on the same station) |
 | `R` | Record picture and sound to a video file (press again to stop) |
 | `T` | Show/hide "Now playing" track titles |
 | `V` | The driver's commentary on/off |
 | `W` | Skip to the next weather (clear → drizzle → rain → storm → mist) |
 | `L` | Cinematic 2.39:1 letterbox on/off |
 | `G` | Film grain on/off |
-| `H` | Hide the hint box |
+| `H` | Hide the hint box and the car stereo |
 | `Space` | Pause |
 | `D` | FPS / frame-time stats |
 
 **On a phone or tablet**, tap the START button in the opening scene (a tap
 anywhere else turns the sound on). Then there are touch controls: hold the ▼ / ▲
-pedals (bottom right) to brake and accelerate, and the ☰ button (top right)
+pedals (bottom right) to brake and accelerate, tap the car stereo (bottom
+left) to change station, and the ☰ button (top right)
 opens music, next track, weather, driver talk, titles, letterbox, pause,
 hide pedals, fullscreen and record. Held sideways the picture fills the screen (a thin
 strip is cropped off the top and bottom); held upright it shows in full,
@@ -76,7 +100,7 @@ URL options:
 - `?q=0|1|2` forces a quality level. The default is automatic.
 - `?debug` shows stats on load.
 - `?mute` keeps the soundtrack off.
-- `?style=miami|amiga|electro|noir` plays only that soundtrack style.
+- `?style=miami|amiga|electro|noir` starts on that style's station.
 - `?rec=1440p` or `?rec=4k` records at that size. The default is 1080p.
 
 Options combine with `&`, for example `?weather=storm&seed=7`.
@@ -143,7 +167,8 @@ The man at the wheel talks, in his own voice (ElevenLabs' Liam): thrilled,
 smooth, and aware that we're riding along. He reacts to the song (a new
 track, a build-up, the drop: "Yes! Yes! Yes!"), to the world (rain, the
 window going up, lightning, the helicopter, the blimp, his cigarette going
-back out: "One for the road never hurt."), to the speed pedal ("Pedal to the
+back out: "One for the road never hurt."), to the oncoming jokes
+("Ice cream at two a.m.? Respect."), to the speed pedal ("Pedal to the
 metal!", "Red light? Good. The hair needs a minute."), and now and then just
 muses ("Suave.", "No socks. Never socks.", "Business up front... party in the
 back."). Sometimes he turns to the camera ("Sunglasses at night? Always.") and
@@ -204,7 +229,9 @@ standard 16:9 size, so pixels stay perfectly square and crisp: 2× for 720p,
   pedestrians with skeletal walk cycles, the hero car (with its flip-up
   headlights) and its talking driver, period traffic (full-size sedans,
   vinyl-roofed coupes, a Trans Am, a woodie wagon, a square-body pickup, a
-  Checker cab and a police cruiser), and street props.
+  Checker cab and a police cruiser), and street props. `src/art/vehicles.js`
+  draws the oncoming specials (fire truck, ambulance, sports car, ice-cream
+  and hot-dog vans, limo, party car).
 - `src/world.js`: the endless world. Parallax sequences spawn to the left
   and retire off the right. Building art is generated in small time slices
   between frames, so nothing stalls the frame.
@@ -228,6 +255,9 @@ standard 16:9 size, so pixels stay perfectly square and crisp: 2× for 720p,
   reverb, ping-pong delay, sidechain, and the vocoder), the weather ambience,
   and the beat and drop sync for the visuals.
 - `tools/make-vocals.js`: generates the vocal pack from `tools/vocals.json`.
+- `src/radio.js`: the car stereo (drawn in pixels on its own small canvas
+  over the picture, so recordings stay clean) and its tuning; the static and
+  the station switch live in `src/audio.js`.
 - `src/recorder.js`: canvas + audio capture with MediaRecorder, streamed to
   disk where the browser supports it.
 - `src/renderer.js`: the colour and emissive buffers, ground-plane
