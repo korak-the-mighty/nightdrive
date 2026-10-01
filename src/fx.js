@@ -203,7 +203,7 @@
       this.r = ND.rng(seed);
       this.items = [];
       this.nextPlane = 60 * this.r.range(15, 45);
-      this.nextHeli = 60 * this.r.range(70, 140);
+      this.nextHeli = 60 * this.r.range(30, 60);
       this.heli = genHeli();
       this.nextBlimp = 60 * this.r.range(20, 45);
       this.blimp = genBlimp();
@@ -245,9 +245,9 @@
       }
       if (tick >= this.nextHeli && weather.v.storm < 0.4) {
         const dir = r() < 0.5 ? -1 : 1;
-        this.items.push({ kind: 'heli', x: dir < 0 ? W + 30 : -30, y: r.range(14, 44), vx: dir * r.range(0.4, 0.6) + 0.12, ph: r() * 100, dir });
+        this.items.push({ kind: 'heli', x: dir < 0 ? W + 30 : -30, y: r.range(14, 36), vx: dir * r.range(0.4, 0.6) + 0.12, ph: r() * 100, dir });
         ND.bus.emit('heli');
-        this.nextHeli = tick + 60 * r.range(150, 320);
+        this.nextHeli = tick + 60 * r.range(70, 150);
       }
       if (tick >= this.nextBlimp) {
         // grounded in a storm, and there's only one
@@ -277,9 +277,12 @@
     }
     draw(R, kind, weather) {
       const { c, g, tick } = R;
+      // on a phone the top of the picture is cropped off: fly below the crop
+      // (the blimp already flies low enough)
+      const lift = kind === 'blimp' ? 0 : Math.max(0, (R.r.cropY || 0) - 12);
       for (const it of this.items) {
         if (it.kind !== kind) continue;
-        const x = Math.round(it.x), y = Math.round(it.y);
+        const x = Math.round(it.x), y = Math.round(it.y) + lift;
         const t = tick + it.ph * 60;
         if (kind === 'blimp') {
           const B = this.blimp, bd = B.board, flip = it.dir > 0;
