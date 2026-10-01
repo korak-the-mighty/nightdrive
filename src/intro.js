@@ -206,7 +206,7 @@
         if (t >= TL.catch) {
           h.lights = t < TL.catch + 0.2 ? (ND.hash(d, 77) < 0.6 ? 1 : 0.2) : 1;
           h.engine = 1;
-          h.podsUp = true; // and the pop-ups flip open
+          h.podsUp = true; // and the pop-ups come up
         }
         if (this.once('catch')) for (let i = 0; i < 9; i++) h.smoke.push({ x: 290 + r() * 3, y: 62 + r() * 2, vx: 0.4 + r() * 0.6, vy: -0.15 - r() * 0.25, age: 0, life: 40 + r() * 30, ph: r() * 6, exh: true });
       }

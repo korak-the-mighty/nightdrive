@@ -119,11 +119,11 @@
         window: 0,   // 0 = window down, 1 = up
         // the opening scene switches these: is he in the car, shades on,
         // engine and lights, the door, how much the car drifts in its lane
-        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 0, podsUp: false, door: 0, seat: null,
+        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 0, podsUp: false, popLight: 0, door: 0, seat: null,
         drift: 1, armHoldUntil: 0, idleBob: 0, lookCam: false,
       };
       if (this.parked) Object.assign(this.hero, { driverIn: false, shades: 0, engine: 0, lights: 0, drift: 0, armOut: 0, armHoldUntil: Infinity });
-      else if (this.podsWeather(false)) Object.assign(this.hero, { pods: 1, podsUp: true }); // already up if we start in the rain
+      else if (this.podsWeather(false)) Object.assign(this.hero, { pods: 1, podsUp: true, popLight: 1 }); // already up if we start in the rain
       this.fxr = ND.rng(seed + 333);
       if (this.parked && !opts.weather) this.weather.hold = true;
       this.intro = this.parked && ND.Intro ? new ND.Intro(this) : null;
@@ -520,14 +520,19 @@
           if (hero.armOut === 1) hero.armQuiet = false;
         }
       }
-      // pop-up headlights: they flip open in rain, storms and mist and fold
-      // away on a clear night (in the opening scene they open as she starts)
+      // pop-up headlights: up in rain, storms and mist, down on a clear night
+      // (in the opening scene they come up as she starts). Going up they rise
+      // shut, then switch on; going down they switch off, then sink.
       if (!this.intro || !this.intro.active) hero.podsUp = this.podsWeather(hero.podsUp);
-      if (hero.podsUp !== !!hero.podsWent) {
-        hero.podsWent = hero.podsUp;
-        if (!init) ND.bus.emit('pods', { up: hero.podsUp });
-      }
-      hero.pods = ND.clamp(hero.pods + (hero.podsUp ? 1 : -1) / 42, 0, 1);
+      let move = 0;
+      if (hero.podsUp) {
+        if (hero.pods < 1) move = 1;
+        else hero.popLight = Math.min(1, hero.popLight + 1 / 30);
+      } else if (hero.popLight > 0) hero.popLight = Math.max(0, hero.popLight - 1 / 9);
+      else if (hero.pods > 0) move = -1;
+      if (move && move !== hero.podsMove && !init) ND.bus.emit('pods', { up: move > 0 });
+      hero.podsMove = move;
+      hero.pods = ND.clamp(hero.pods + move / 42, 0, 1);
       // cigarette smoke, whisked back by the wind (car-local coordinates)
       const A = hero.arm, fr = A.frames[ND.clamp(Math.round(((hero.armTh - A.th0) / (A.th1 - A.th0)) * (A.N - 1)), 0, A.N - 1)];
       const fx = this.fxr, rain = this.weather.v.rain;

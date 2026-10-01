@@ -427,74 +427,71 @@
     return body;
   }
 
-  // Pop-up headlight, the Porsche 928 kind: the lamp lies in the hood with its
-  // glass facing the sky, and flips forward on a hinge at its front edge until
-  // the glass faces the road. Frame 0 is shut, the last one open. Each frame
-  // has the lamp (glass unlit), the glass lit, where the light leaves the glass,
-  // which way it points (radians above level) and how far the lamp is on.
-  const POP = { x: 19, L: 8, T: 7, N: 16 };
+  // Pop-up headlight: shut, it is a lid flush with the hood. To open, the lamp
+  // swings up on a long arm hinged behind it, front edge first, and rises out
+  // of the hood until it stands upright with its glass facing the road.
+  // Frame 0 is shut, the last one open. Each frame has the lamp, its glass
+  // lit, and where the light leaves the glass.
+  const POP = { x: 19, L: 8, H: 14, rise: 9, arm: 30, N: 14 };
   function genPopups() {
-    const { x: hx, L, T, N } = POP;
+    const { x: hx, L, H, rise, arm, N } = POP;
     const P = (c) => ND.pack(c[0], c[1], c[2]);
-    const hy = topY(hx) + 1; // the hinge, just under the hood's top edge
-    const phi0 = Math.atan((topY(hx) - topY(hx + L)) / L); // lying along the hood
     const edge = (x) => Math.ceil(topY(x + 0.5) - 0.5); // the hood's top row
-    const ox = hx - 3, oy = Math.floor(hy) - L - 3, w = L + T + 7, h = L + 8;
-    const glass = rgb('#a49ce0'), glassD = rgb('#7a72b8'), glint = rgb('#ffffff'), glassUp = rgb('#4a4486');
-    const chrome = rgb('#c4bedc'), chromeD = rgb('#8c88a8'), hole = rgb('#120e20'), holeL = rgb('#3a3458');
+    const above = (x, y) => y + 0.5 < topY(x + 0.5) + 1; // outside the body
+    // open: an upright box, lid on top, glass at the front; the arm's hinge
+    // is level with the lid, so swinging it down by `lift` tucks the lid into the hood
+    const top = topY(hx) + 0.5 - rise;
+    const pv = [hx + L + arm, top];
+    const lift = Math.asin(rise / (L + arm));
+    const ox = hx - 3, oy = Math.floor(top) - 2, w = L + 7, h = rise + 6;
+    const glass = rgb('#4a4486'), glint = rgb('#c4bcf4'), chrome = rgb('#c4bedc');
+    const hole = rgb('#120e20'), holeL = rgb('#3a3458'), seam = rgb('#c8c0dc');
     const shell = rgb('#e2dcf2'), shellL = rgb('#ffffff'), shellD = rgb('#8a82ac'), shellK = rgb('#5e5684');
     const frames = [];
     for (let f = 0; f < N; f++) {
-      const p = f / (N - 1);
-      const phi = phi0 + (Math.PI / 2 - phi0) * p;
-      const cs = Math.cos(phi), sn = Math.sin(phi);
+      const p = f / (N - 1), a = -(1 - p) * lift, ca = Math.cos(a), sa = Math.sin(a);
       const pb = new ND.PB(w, h), lit = new ND.PB(w, h);
       const at = (x, y, c, pbx = pb) => pbx.set(x - ox, y - oy, P(c));
-      // in the lamp's own frame: u along the glass (front to back when shut),
-      // v from the glass down into the housing; the back corners are rounded
+      // a point of the open lamp (u front to back, v lid downwards), swung down by a
+      const fwd = (u, v) => {
+        const x = hx + u - pv[0], y = top + v - pv[1];
+        return [pv[0] + x * ca - y * sa, pv[1] + x * sa + y * ca];
+      };
+      // ... and back: where a pixel sits on the lamp
       const local = (x, y) => {
-        const dx = x + 0.5 - hx, dy = y + 0.5 - hy;
-        return [dx * cs - dy * sn, dx * sn + dy * cs];
+        const rx = x + 0.5 - pv[0], ry = y + 0.5 - pv[1];
+        return [pv[0] + rx * ca + ry * sa - hx, pv[1] - rx * sa + ry * ca - top];
       };
       const inside = (x, y) => {
         const [u, v] = local(x, y);
-        if (u < 0 || u > L || v < 0 || v > T) return false;
-        const cu = u < 2 ? 2 : u > L - 2 ? L - 2 : u;
-        return v < T - 2 || Math.hypot(u - cu, v - (T - 2)) <= 2;
+        return u >= 0 && u <= L && v >= 0 && v <= H && !(u > L - 1.4 && v < 1.4 && Math.hypot(u - (L - 1.4), v - 1.4) > 1.4);
       };
       for (let x = hx; x < hx + L; x++) {
         const e = edge(x);
         if (f === 0) {
-          // shut: the lens lies in the hood facing the sky, glass in a chrome ring
-          if (x === hx || x === hx + L - 1) continue;
-          const end = x === hx + 1 || x === hx + L - 2;
-          at(x, e + 1, end ? chrome : x === hx + 2 ? glint : glass);
-          at(x, e + 2, end ? chromeD : glassD);
+          // shut: just the lid's seams in the hood
+          if (x === hx || x === hx + L - 1) { at(x, e + 1, seam); at(x, e + 2, seam); }
         } else {
-          at(x, e + 1, hole); // the slot it rises out of
+          at(x, e + 1, hole); // the opening it rises out of
           at(x, e + 2, holeL);
         }
       }
       if (f > 0) {
         for (let y = oy; y < oy + h; y++)
           for (let x = ox; x < ox + w; x++) {
-            if (y + 0.5 >= topY(x + 0.5) + 1 || !inside(x, y)) continue; // still inside the body
+            if (!above(x, y) || !inside(x, y)) continue;
             const [u, v] = local(x, y);
-            if (v < 2) {
-              const end = u < 1.1 || u > L - 1.1;
-              at(x, y, end ? chrome : Math.abs(u - L * 0.7) < 0.6 ? glint : glassUp);
-              if (!end) at(x, y, Math.abs(u - L / 2) < 1.6 ? [255, 255, 255] : [255, 246, 214], lit);
-            } else if (v < 2.9) at(x, y, chrome);
-            else if (!inside(x + 1, y) || v > T - 1.1) at(x, y, shellK); // the back, turned away
-            else at(x, y, !inside(x, y - 1) ? shellL : v > T - 2.2 || !inside(x, y + 1) ? shellD : shell);
+            if (v < 1.1) at(x, y, shellL); // the lid on top catches the sky
+            else if (u < 2) {
+              at(x, y, Math.abs(v - 2.5) < 0.6 ? glint : glass); // the glass, facing the road
+              at(x, y, Math.abs(v - 4.5) < 1.6 ? [255, 255, 255] : [255, 246, 214], lit);
+            } else if (u < 2.9) at(x, y, chrome);
+            else if (u > L - 1.1) at(x, y, shellK); // the back, turned away
+            else at(x, y, !above(x, y + 1) ? shellD : shell);
           }
       }
-      frames.push({
-        c: pb.canvas(), lit: lit.canvas(), ox, oy, p,
-        lens: [hx + (L / 2) * cs - 0.5 * sn, hy - (L / 2) * sn - 0.5 * cs],
-        e: Math.PI / 2 - phi - 0.04 * p, // aimed a touch down at the road once open
-        on: ND.clamp((phi - 0.35) / 0.45, 0, 1),
-      });
+      // where the light leaves the glass (the middle of the front once it is up)
+      frames.push({ c: pb.canvas(), lit: lit.canvas(), ox, oy, p, lens: fwd(-0.5, 4.5) });
     }
     return { frames };
   }

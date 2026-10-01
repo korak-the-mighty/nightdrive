@@ -197,10 +197,11 @@ The world reacts to the music:
 
 The weather reacts too: rain and tyre hiss follow its intensity, and thunder
 rolls in after each lightning strike. When rain, a storm or mist rolls in, the
-pop-up headlights flip open the way a Porsche 928's do. Each lamp lies in the
-hood with its glass facing the sky, then turns forward with a little motor
-whirr, so its beam swings down out of the sky and onto the road, lighting up
-the rain and mist far ahead. On a clear night they fold away again.
+pop-up headlights open. Shut, each one is a lid flush with the hood. With a
+little motor whirr the lamp rises up out of the hood, front edge first, until
+its glass faces the road. Then it switches on, and the beam grows out into a
+big light that cuts through the rain and mist far ahead. When the weather
+clears, the lights go off first and then the lamps sink back into the hood.
 
 ## Recording for YouTube
 
