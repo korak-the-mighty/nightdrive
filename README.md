@@ -35,8 +35,9 @@ ELVIS"). It stays grounded in a storm.
 
 Oncoming traffic flashes past every few seconds in the lane on the other side
 of the centre line (headlights first, reflected in the wet road, with a
-whoosh that pans across the speakers). Most of it is ordinary cars. At most
-once a minute (never the same joke twice in a row) it's something else: a fire truck with a
+whoosh that pans across the speakers). Most of it is ordinary cars. About
+fifteen seconds into the drive, and then every minute or so (never the same
+joke twice in a row), it's something else: a fire truck with a
 dalmatian riding along, an ambulance, a red sports car with a police cruiser
 right on its tail, an ice-cream van and a hot-dog van (each with a giant
 snack on the roof), a white stretch limo with someone
