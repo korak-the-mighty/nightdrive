@@ -145,8 +145,8 @@
         cone: ND.genCone(64, 118, [255, 186, 110]),
         beamAir: ND.genBeam(230, 16, [255, 244, 222]),
         beamGround: ND.genGroundBeam(220, 22, [255, 236, 200]),
-        // the pop-ups' beam at each tilt it sweeps through as they flip open
-        popBeams: Array.from({ length: 12 }, (_, k) => ND.genBeamAt(300, 18, [255, 246, 226], -0.04 + (k / 11) * 1.24, 1)),
+        // the pop-ups' beam, aimed a touch down at the road
+        popBeam: ND.genBeamAt(320, 22, [255, 246, 226], -0.04, 1),
         popGround: ND.genGroundBeam(260, 26, [255, 240, 210]),
         tBeamAir: ND.genBeam(130, 9, [255, 240, 210]),
         tBeamGround: ND.genGroundBeam(130, 12, [255, 230, 190]),
@@ -754,8 +754,8 @@
           cx.globalCompositeOperation = 'source-over';
         }
       }
-      // lamps dark until the engine starts; the pop-up's glass lights as it flips
-      const lights = h.lights, pop = lights * pf.on;
+      // lamps dark until the engine starts; the pop-ups light once they're up
+      const lights = h.lights, pop = lights * h.popLight;
       if (lights < 1) {
         cx.globalAlpha = 1 - lights;
         cx.drawImage(h.body.lampsOff, 0, h.bob);
@@ -859,23 +859,26 @@
         g0.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
         g0.globalAlpha = 1;
       }
-      // the pop-ups: a long beam that swings down out of the sky as they flip
-      // open, standing out in the rain and mist, and light far down the road
+      // the pop-ups: once they're up and on, the beam grows out from the glass
+      // into a big light, standing out in the rain and mist, far down the road
       if (pop > 0) {
-        const B = this.fx.popBeams, k = ND.clamp(Math.round(((pf.e + 0.04) / 1.24) * (B.length - 1)), 0, B.length - 1);
-        const bx = Math.round(x + pf.lens[0]) - B[k].ax, by = Math.round(y + h.bob + pf.lens[1]) - B[k].ay;
-        const haze = pop * (0.15 + 0.65 * Math.max(R.weather.v.rain, R.weather.v.fog));
+        const B = this.fx.popBeam, G = this.fx.popGround;
+        const grow = 1 - (1 - h.popLight) ** 2, sx = 0.25 + 0.75 * grow, sy = 0.5 + 0.5 * grow;
+        const lx = Math.round(x + pf.lens[0]), ly = Math.round(y + h.bob + pf.lens[1]);
+        const bx = lx - Math.round(B.ax * sx), by = ly - Math.round(B.ay * sy), bw = Math.round(B.c.width * sx), bh = Math.round(B.c.height * sy);
+        const gw = Math.round(G.width * sx), gx = x - 40 - gw;
+        const haze = pop * (0.2 + 0.7 * Math.max(R.weather.v.rain, R.weather.v.fog));
         c.globalCompositeOperation = 'lighter';
         c.globalAlpha = haze;
-        c.drawImage(B[k].c, bx, by);
-        c.globalAlpha = 0.45 * pop * pf.p;
-        c.drawImage(this.fx.popGround, x - 300, Y.CAR - 14);
+        c.drawImage(B.c, bx, by, bw, bh);
+        c.globalAlpha = 0.45 * pop;
+        c.drawImage(G, gx, Y.CAR - 14, gw, G.height);
         c.globalAlpha = 1;
         c.globalCompositeOperation = 'source-over';
         g0.globalAlpha = haze * 0.4;
-        g0.drawImage(B[k].c, bx, by);
-        g0.globalAlpha = 0.3 * pop * pf.p;
-        g0.drawImage(this.fx.popGround, x - 300, Y.CAR - 14);
+        g0.drawImage(B.c, bx, by, bw, bh);
+        g0.globalAlpha = 0.3 * pop;
+        g0.drawImage(G, gx, Y.CAR - 14, gw, G.height);
         g0.globalAlpha = 1;
       }
       this.reflect(this.carC, x, Y.CAR, HH, 0.34, R.t, 80);
@@ -897,8 +900,8 @@
         const lx = Math.round(x + pf.lens[0]), ly = Math.round(y + h.bob + pf.lens[1]);
         g.globalAlpha = pop;
         g.drawImage(pf.lit, x + pf.ox, y + pf.oy + h.bob);
-        g.fillStyle = 'rgba(255,248,225,0.8)';
-        g.fillRect(lx - 2, ly - 2, 3, 4);
+        g.fillStyle = 'rgba(255,248,225,0.85)';
+        g.fillRect(lx - 3, ly - 3, 4, 6);
         g.fillStyle = 'rgba(255,248,225,0.4)';
         g.fillRect(lx - 1, Y.CAR + 3, 3, 34);
         g.globalAlpha = 1;

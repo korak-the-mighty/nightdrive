@@ -3308,74 +3308,71 @@
     return body;
   }
 
-  // Pop-up headlight, the Porsche 928 kind: the lamp lies in the hood with its
-  // glass facing the sky, and flips forward on a hinge at its front edge until
-  // the glass faces the road. Frame 0 is shut, the last one open. Each frame
-  // has the lamp (glass unlit), the glass lit, where the light leaves the glass,
-  // which way it points (radians above level) and how far the lamp is on.
-  const POP = { x: 19, L: 8, T: 7, N: 16 };
+  // Pop-up headlight: shut, it is a lid flush with the hood. To open, the lamp
+  // swings up on a long arm hinged behind it, front edge first, and rises out
+  // of the hood until it stands upright with its glass facing the road.
+  // Frame 0 is shut, the last one open. Each frame has the lamp, its glass
+  // lit, and where the light leaves the glass.
+  const POP = { x: 19, L: 8, H: 14, rise: 9, arm: 30, N: 14 };
   function genPopups() {
-    const { x: hx, L, T, N } = POP;
+    const { x: hx, L, H, rise, arm, N } = POP;
     const P = (c) => ND.pack(c[0], c[1], c[2]);
-    const hy = topY(hx) + 1; // the hinge, just under the hood's top edge
-    const phi0 = Math.atan((topY(hx) - topY(hx + L)) / L); // lying along the hood
     const edge = (x) => Math.ceil(topY(x + 0.5) - 0.5); // the hood's top row
-    const ox = hx - 3, oy = Math.floor(hy) - L - 3, w = L + T + 7, h = L + 8;
-    const glass = rgb('#a49ce0'), glassD = rgb('#7a72b8'), glint = rgb('#ffffff'), glassUp = rgb('#4a4486');
-    const chrome = rgb('#c4bedc'), chromeD = rgb('#8c88a8'), hole = rgb('#120e20'), holeL = rgb('#3a3458');
+    const above = (x, y) => y + 0.5 < topY(x + 0.5) + 1; // outside the body
+    // open: an upright box, lid on top, glass at the front; the arm's hinge
+    // is level with the lid, so swinging it down by `lift` tucks the lid into the hood
+    const top = topY(hx) + 0.5 - rise;
+    const pv = [hx + L + arm, top];
+    const lift = Math.asin(rise / (L + arm));
+    const ox = hx - 3, oy = Math.floor(top) - 2, w = L + 7, h = rise + 6;
+    const glass = rgb('#4a4486'), glint = rgb('#c4bcf4'), chrome = rgb('#c4bedc');
+    const hole = rgb('#120e20'), holeL = rgb('#3a3458'), seam = rgb('#c8c0dc');
     const shell = rgb('#e2dcf2'), shellL = rgb('#ffffff'), shellD = rgb('#8a82ac'), shellK = rgb('#5e5684');
     const frames = [];
     for (let f = 0; f < N; f++) {
-      const p = f / (N - 1);
-      const phi = phi0 + (Math.PI / 2 - phi0) * p;
-      const cs = Math.cos(phi), sn = Math.sin(phi);
+      const p = f / (N - 1), a = -(1 - p) * lift, ca = Math.cos(a), sa = Math.sin(a);
       const pb = new ND.PB(w, h), lit = new ND.PB(w, h);
       const at = (x, y, c, pbx = pb) => pbx.set(x - ox, y - oy, P(c));
-      // in the lamp's own frame: u along the glass (front to back when shut),
-      // v from the glass down into the housing; the back corners are rounded
+      // a point of the open lamp (u front to back, v lid downwards), swung down by a
+      const fwd = (u, v) => {
+        const x = hx + u - pv[0], y = top + v - pv[1];
+        return [pv[0] + x * ca - y * sa, pv[1] + x * sa + y * ca];
+      };
+      // ... and back: where a pixel sits on the lamp
       const local = (x, y) => {
-        const dx = x + 0.5 - hx, dy = y + 0.5 - hy;
-        return [dx * cs - dy * sn, dx * sn + dy * cs];
+        const rx = x + 0.5 - pv[0], ry = y + 0.5 - pv[1];
+        return [pv[0] + rx * ca + ry * sa - hx, pv[1] - rx * sa + ry * ca - top];
       };
       const inside = (x, y) => {
         const [u, v] = local(x, y);
-        if (u < 0 || u > L || v < 0 || v > T) return false;
-        const cu = u < 2 ? 2 : u > L - 2 ? L - 2 : u;
-        return v < T - 2 || Math.hypot(u - cu, v - (T - 2)) <= 2;
+        return u >= 0 && u <= L && v >= 0 && v <= H && !(u > L - 1.4 && v < 1.4 && Math.hypot(u - (L - 1.4), v - 1.4) > 1.4);
       };
       for (let x = hx; x < hx + L; x++) {
         const e = edge(x);
         if (f === 0) {
-          // shut: the lens lies in the hood facing the sky, glass in a chrome ring
-          if (x === hx || x === hx + L - 1) continue;
-          const end = x === hx + 1 || x === hx + L - 2;
-          at(x, e + 1, end ? chrome : x === hx + 2 ? glint : glass);
-          at(x, e + 2, end ? chromeD : glassD);
+          // shut: just the lid's seams in the hood
+          if (x === hx || x === hx + L - 1) { at(x, e + 1, seam); at(x, e + 2, seam); }
         } else {
-          at(x, e + 1, hole); // the slot it rises out of
+          at(x, e + 1, hole); // the opening it rises out of
           at(x, e + 2, holeL);
         }
       }
       if (f > 0) {
         for (let y = oy; y < oy + h; y++)
           for (let x = ox; x < ox + w; x++) {
-            if (y + 0.5 >= topY(x + 0.5) + 1 || !inside(x, y)) continue; // still inside the body
+            if (!above(x, y) || !inside(x, y)) continue;
             const [u, v] = local(x, y);
-            if (v < 2) {
-              const end = u < 1.1 || u > L - 1.1;
-              at(x, y, end ? chrome : Math.abs(u - L * 0.7) < 0.6 ? glint : glassUp);
-              if (!end) at(x, y, Math.abs(u - L / 2) < 1.6 ? [255, 255, 255] : [255, 246, 214], lit);
-            } else if (v < 2.9) at(x, y, chrome);
-            else if (!inside(x + 1, y) || v > T - 1.1) at(x, y, shellK); // the back, turned away
-            else at(x, y, !inside(x, y - 1) ? shellL : v > T - 2.2 || !inside(x, y + 1) ? shellD : shell);
+            if (v < 1.1) at(x, y, shellL); // the lid on top catches the sky
+            else if (u < 2) {
+              at(x, y, Math.abs(v - 2.5) < 0.6 ? glint : glass); // the glass, facing the road
+              at(x, y, Math.abs(v - 4.5) < 1.6 ? [255, 255, 255] : [255, 246, 214], lit);
+            } else if (u < 2.9) at(x, y, chrome);
+            else if (u > L - 1.1) at(x, y, shellK); // the back, turned away
+            else at(x, y, !above(x, y + 1) ? shellD : shell);
           }
       }
-      frames.push({
-        c: pb.canvas(), lit: lit.canvas(), ox, oy, p,
-        lens: [hx + (L / 2) * cs - 0.5 * sn, hy - (L / 2) * sn - 0.5 * cs],
-        e: Math.PI / 2 - phi - 0.04 * p, // aimed a touch down at the road once open
-        on: ND.clamp((phi - 0.35) / 0.45, 0, 1),
-      });
+      // where the light leaves the glass (the middle of the front once it is up)
+      frames.push({ c: pb.canvas(), lit: lit.canvas(), ox, oy, p, lens: fwd(-0.5, 4.5) });
     }
     return { frames };
   }
@@ -8979,7 +8976,7 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
         if (t >= TL.catch) {
           h.lights = t < TL.catch + 0.2 ? (ND.hash(d, 77) < 0.6 ? 1 : 0.2) : 1;
           h.engine = 1;
-          h.podsUp = true; // and the pop-ups flip open
+          h.podsUp = true; // and the pop-ups come up
         }
         if (this.once('catch')) for (let i = 0; i < 9; i++) h.smoke.push({ x: 290 + r() * 3, y: 62 + r() * 2, vx: 0.4 + r() * 0.6, vy: -0.15 - r() * 0.25, age: 0, life: 40 + r() * 30, ph: r() * 6, exh: true });
       }
@@ -9299,11 +9296,11 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
         window: 0,   // 0 = window down, 1 = up
         // the opening scene switches these: is he in the car, shades on,
         // engine and lights, the door, how much the car drifts in its lane
-        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 0, podsUp: false, door: 0, seat: null,
+        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 0, podsUp: false, popLight: 0, door: 0, seat: null,
         drift: 1, armHoldUntil: 0, idleBob: 0, lookCam: false,
       };
       if (this.parked) Object.assign(this.hero, { driverIn: false, shades: 0, engine: 0, lights: 0, drift: 0, armOut: 0, armHoldUntil: Infinity });
-      else if (this.podsWeather(false)) Object.assign(this.hero, { pods: 1, podsUp: true }); // already up if we start in the rain
+      else if (this.podsWeather(false)) Object.assign(this.hero, { pods: 1, podsUp: true, popLight: 1 }); // already up if we start in the rain
       this.fxr = ND.rng(seed + 333);
       if (this.parked && !opts.weather) this.weather.hold = true;
       this.intro = this.parked && ND.Intro ? new ND.Intro(this) : null;
@@ -9703,14 +9700,19 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
           if (hero.armOut === 1) hero.armQuiet = false;
         }
       }
-      // pop-up headlights: they flip open in rain, storms and mist and fold
-      // away on a clear night (in the opening scene they open as she starts)
+      // pop-up headlights: up in rain, storms and mist, down on a clear night
+      // (in the opening scene they come up as she starts). Going up they rise
+      // shut, then switch on; going down they switch off, then sink.
       if (!this.intro || !this.intro.active) hero.podsUp = this.podsWeather(hero.podsUp);
-      if (hero.podsUp !== !!hero.podsWent) {
-        hero.podsWent = hero.podsUp;
-        if (!init) ND.bus.emit('pods', { up: hero.podsUp });
-      }
-      hero.pods = ND.clamp(hero.pods + (hero.podsUp ? 1 : -1) / 42, 0, 1);
+      let move = 0;
+      if (hero.podsUp) {
+        if (hero.pods < 1) move = 1;
+        else hero.popLight = Math.min(1, hero.popLight + 1 / 30);
+      } else if (hero.popLight > 0) hero.popLight = Math.max(0, hero.popLight - 1 / 9);
+      else if (hero.pods > 0) move = -1;
+      if (move && move !== hero.podsMove && !init) ND.bus.emit('pods', { up: move > 0 });
+      hero.podsMove = move;
+      hero.pods = ND.clamp(hero.pods + move / 42, 0, 1);
       // cigarette smoke, whisked back by the wind (car-local coordinates)
       const A = hero.arm, fr = A.frames[ND.clamp(Math.round(((hero.armTh - A.th0) / (A.th1 - A.th0)) * (A.N - 1)), 0, A.N - 1)];
       const fx = this.fxr, rain = this.weather.v.rain;
@@ -9913,8 +9915,8 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
         cone: ND.genCone(64, 118, [255, 186, 110]),
         beamAir: ND.genBeam(230, 16, [255, 244, 222]),
         beamGround: ND.genGroundBeam(220, 22, [255, 236, 200]),
-        // the pop-ups' beam at each tilt it sweeps through as they flip open
-        popBeams: Array.from({ length: 12 }, (_, k) => ND.genBeamAt(300, 18, [255, 246, 226], -0.04 + (k / 11) * 1.24, 1)),
+        // the pop-ups' beam, aimed a touch down at the road
+        popBeam: ND.genBeamAt(320, 22, [255, 246, 226], -0.04, 1),
         popGround: ND.genGroundBeam(260, 26, [255, 240, 210]),
         tBeamAir: ND.genBeam(130, 9, [255, 240, 210]),
         tBeamGround: ND.genGroundBeam(130, 12, [255, 230, 190]),
@@ -10522,8 +10524,8 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
           cx.globalCompositeOperation = 'source-over';
         }
       }
-      // lamps dark until the engine starts; the pop-up's glass lights as it flips
-      const lights = h.lights, pop = lights * pf.on;
+      // lamps dark until the engine starts; the pop-ups light once they're up
+      const lights = h.lights, pop = lights * h.popLight;
       if (lights < 1) {
         cx.globalAlpha = 1 - lights;
         cx.drawImage(h.body.lampsOff, 0, h.bob);
@@ -10627,23 +10629,26 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
         g0.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
         g0.globalAlpha = 1;
       }
-      // the pop-ups: a long beam that swings down out of the sky as they flip
-      // open, standing out in the rain and mist, and light far down the road
+      // the pop-ups: once they're up and on, the beam grows out from the glass
+      // into a big light, standing out in the rain and mist, far down the road
       if (pop > 0) {
-        const B = this.fx.popBeams, k = ND.clamp(Math.round(((pf.e + 0.04) / 1.24) * (B.length - 1)), 0, B.length - 1);
-        const bx = Math.round(x + pf.lens[0]) - B[k].ax, by = Math.round(y + h.bob + pf.lens[1]) - B[k].ay;
-        const haze = pop * (0.15 + 0.65 * Math.max(R.weather.v.rain, R.weather.v.fog));
+        const B = this.fx.popBeam, G = this.fx.popGround;
+        const grow = 1 - (1 - h.popLight) ** 2, sx = 0.25 + 0.75 * grow, sy = 0.5 + 0.5 * grow;
+        const lx = Math.round(x + pf.lens[0]), ly = Math.round(y + h.bob + pf.lens[1]);
+        const bx = lx - Math.round(B.ax * sx), by = ly - Math.round(B.ay * sy), bw = Math.round(B.c.width * sx), bh = Math.round(B.c.height * sy);
+        const gw = Math.round(G.width * sx), gx = x - 40 - gw;
+        const haze = pop * (0.2 + 0.7 * Math.max(R.weather.v.rain, R.weather.v.fog));
         c.globalCompositeOperation = 'lighter';
         c.globalAlpha = haze;
-        c.drawImage(B[k].c, bx, by);
-        c.globalAlpha = 0.45 * pop * pf.p;
-        c.drawImage(this.fx.popGround, x - 300, Y.CAR - 14);
+        c.drawImage(B.c, bx, by, bw, bh);
+        c.globalAlpha = 0.45 * pop;
+        c.drawImage(G, gx, Y.CAR - 14, gw, G.height);
         c.globalAlpha = 1;
         c.globalCompositeOperation = 'source-over';
         g0.globalAlpha = haze * 0.4;
-        g0.drawImage(B[k].c, bx, by);
-        g0.globalAlpha = 0.3 * pop * pf.p;
-        g0.drawImage(this.fx.popGround, x - 300, Y.CAR - 14);
+        g0.drawImage(B.c, bx, by, bw, bh);
+        g0.globalAlpha = 0.3 * pop;
+        g0.drawImage(G, gx, Y.CAR - 14, gw, G.height);
         g0.globalAlpha = 1;
       }
       this.reflect(this.carC, x, Y.CAR, HH, 0.34, R.t, 80);
@@ -10665,8 +10670,8 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
         const lx = Math.round(x + pf.lens[0]), ly = Math.round(y + h.bob + pf.lens[1]);
         g.globalAlpha = pop;
         g.drawImage(pf.lit, x + pf.ox, y + pf.oy + h.bob);
-        g.fillStyle = 'rgba(255,248,225,0.8)';
-        g.fillRect(lx - 2, ly - 2, 3, 4);
+        g.fillStyle = 'rgba(255,248,225,0.85)';
+        g.fillRect(lx - 3, ly - 3, 4, 6);
         g.fillStyle = 'rgba(255,248,225,0.4)';
         g.fillRect(lx - 1, Y.CAR + 3, 3, 34);
         g.globalAlpha = 1;
