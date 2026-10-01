@@ -65,6 +65,27 @@
     return { c: pb.canvas(), ax: -x0, ay: -y0, elev };
   }
 
+  // Where a beam lands on the road ahead of a car (the car is at the right
+  // edge): dark right under the lamp, brightest `peak` px ahead where the beam
+  // meets the road, fading out by `len`.
+  function genBeamPool(len, h, color, near, peak) {
+    const pb = new ND.PB(len, h);
+    const ss = (a, b, v) => { const t = ND.clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+    for (let x = 0; x < len; x++) {
+      const d = len - 1 - x;
+      const k = ss(near, peak, d) * (1 - ss(peak, len, d));
+      if (k <= 0) continue;
+      const width = 0.45 + 0.55 * ss(near, len, d);
+      for (let y = 0; y < h; y++) {
+        const v = Math.abs(y - h / 2 + 0.5) / (h / 2) / width;
+        if (v >= 1) continue;
+        const a = dq((1 - v * v) * k, x, y);
+        if (a > 0) pb.set(x, y, ND.pack(color[0] * a, color[1] * a, color[2] * a));
+      }
+    }
+    return pb.canvas();
+  }
+
   // Elongated pool of light on the road ahead of a car.
   function genGroundBeam(len, h, color) {
     const pb = new ND.PB(len, h);
@@ -381,6 +402,7 @@
   ND.genBeam = genBeam;
   ND.genBeamAt = genBeamAt;
   ND.genGroundBeam = genGroundBeam;
+  ND.genBeamPool = genBeamPool;
   ND.genGrain = genGrain;
   ND.genUmbrellas = genUmbrellas;
   ND.Aircraft = Aircraft;

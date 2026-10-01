@@ -5055,6 +5055,27 @@
     return { c: pb.canvas(), ax: -x0, ay: -y0, elev };
   }
 
+  // Where a beam lands on the road ahead of a car (the car is at the right
+  // edge): dark right under the lamp, brightest `peak` px ahead where the beam
+  // meets the road, fading out by `len`.
+  function genBeamPool(len, h, color, near, peak) {
+    const pb = new ND.PB(len, h);
+    const ss = (a, b, v) => { const t = ND.clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+    for (let x = 0; x < len; x++) {
+      const d = len - 1 - x;
+      const k = ss(near, peak, d) * (1 - ss(peak, len, d));
+      if (k <= 0) continue;
+      const width = 0.45 + 0.55 * ss(near, len, d);
+      for (let y = 0; y < h; y++) {
+        const v = Math.abs(y - h / 2 + 0.5) / (h / 2) / width;
+        if (v >= 1) continue;
+        const a = dq((1 - v * v) * k, x, y);
+        if (a > 0) pb.set(x, y, ND.pack(color[0] * a, color[1] * a, color[2] * a));
+      }
+    }
+    return pb.canvas();
+  }
+
   // Elongated pool of light on the road ahead of a car.
   function genGroundBeam(len, h, color) {
     const pb = new ND.PB(len, h);
@@ -5371,6 +5392,7 @@
   ND.genBeam = genBeam;
   ND.genBeamAt = genBeamAt;
   ND.genGroundBeam = genGroundBeam;
+  ND.genBeamPool = genBeamPool;
   ND.genGrain = genGrain;
   ND.genUmbrellas = genUmbrellas;
   ND.Aircraft = Aircraft;
@@ -9910,11 +9932,13 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
       this.fx = {
         rings: ND.genRings(),
         cone: ND.genCone(64, 118, [255, 186, 110]),
-        beamAir: ND.genBeam(230, 16, [255, 244, 222]),
-        beamGround: ND.genGroundBeam(220, 22, [255, 236, 200]),
+        // the driving lights in the bumper: a beam angled down from the lamp,
+        // and the pool where it lands on the road
+        beamAir: ND.genBeamAt(240, 14, [255, 244, 222], -0.16, 0.55),
+        beamGround: ND.genBeamPool(230, 18, [255, 236, 200], 45, 130),
         // the pop-ups' beam, aimed a touch down at the road
-        popBeam: ND.genBeamAt(320, 22, [255, 246, 226], -0.04, 1),
-        popGround: ND.genGroundBeam(260, 26, [255, 240, 210]),
+        popBeam: ND.genBeamAt(320, 22, [255, 246, 226], -0.08, 1),
+        popGround: ND.genBeamPool(330, 24, [255, 240, 210], 110, 230),
         tBeamAir: ND.genBeam(130, 9, [255, 240, 210]),
         tBeamGround: ND.genGroundBeam(130, 12, [255, 230, 190]),
         redPool: ND.genPool(64, 14, [255, 40, 60], 0.7),
@@ -10608,22 +10632,24 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
       const spin = ((-h.angle % WF.period) + WF.period) % WF.period;
       const fr = Math.floor((spin / WF.period) * WF.frames.length) % WF.frames.length;
       for (const [wx, wy] of ND.HERO.WHEELS) cx.drawImage(WF.frames[fr], wx - WF.R, wy - WF.R);
-      // driving lights: pool on the road ahead + a beam you can see in the rain
-      const c = this.c, g0 = this.g;
-      const air = (0.06 + 0.5 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights;
+      // driving lights: a beam from the bumper lamp, angled down to where it
+      // lands on the road ahead (stronger in rain and mist)
+      const c = this.c, g0 = this.g, BA = this.fx.beamAir, BG = this.fx.beamGround;
+      const air = (0.2 + 0.45 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights;
+      const ax = x + 1 - BA.ax, ay = y + h.bob + 46 - BA.ay, gx = x + 1 - BG.width, gy = Y.CAR - 11;
       if (lights > 0) {
         c.globalCompositeOperation = 'lighter';
         c.globalAlpha = 0.55 * lights;
-        c.drawImage(this.fx.beamGround, x - 212, Y.CAR - 12);
+        c.drawImage(BG, gx, gy);
         c.drawImage(this.fx.redPool, x + 262, Y.CAR - 5);
         c.globalAlpha = air;
-        c.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
+        c.drawImage(BA.c, ax, ay);
         c.globalAlpha = 1;
         c.globalCompositeOperation = 'source-over';
         g0.globalAlpha = 0.35 * lights;
-        g0.drawImage(this.fx.beamGround, x - 212, Y.CAR - 12);
+        g0.drawImage(BG, gx, gy);
         g0.globalAlpha = air * 0.6;
-        g0.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
+        g0.drawImage(BA.c, ax, ay);
         g0.globalAlpha = 1;
       }
       // the pop-ups: once they're up and on, the beam grows out from the glass
@@ -10633,19 +10659,19 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
         const grow = 1 - (1 - h.popLight) ** 2, sx = 0.25 + 0.75 * grow, sy = 0.5 + 0.5 * grow;
         const lx = Math.round(x + pf.lens[0]), ly = Math.round(y + h.bob + pf.lens[1]);
         const bx = lx - Math.round(B.ax * sx), by = ly - Math.round(B.ay * sy), bw = Math.round(B.c.width * sx), bh = Math.round(B.c.height * sy);
-        const gw = Math.round(G.width * sx), gx = x - 40 - gw;
+        const gw = Math.round(G.width * sx), px = x + 1 - gw;
         const haze = pop * (0.2 + 0.7 * Math.max(R.weather.v.rain, R.weather.v.fog));
         c.globalCompositeOperation = 'lighter';
         c.globalAlpha = haze;
         c.drawImage(B.c, bx, by, bw, bh);
         c.globalAlpha = 0.45 * pop;
-        c.drawImage(G, gx, Y.CAR - 14, gw, G.height);
+        c.drawImage(G, px, Y.CAR - 13, gw, G.height);
         c.globalAlpha = 1;
         c.globalCompositeOperation = 'source-over';
         g0.globalAlpha = haze * 0.4;
         g0.drawImage(B.c, bx, by, bw, bh);
         g0.globalAlpha = 0.3 * pop;
-        g0.drawImage(G, gx, Y.CAR - 14, gw, G.height);
+        g0.drawImage(G, px, Y.CAR - 13, gw, G.height);
         g0.globalAlpha = 1;
       }
       this.reflect(this.carC, x, Y.CAR, HH, 0.34, R.t, 80);
