@@ -4025,75 +4025,78 @@
 
   // ---- heads ------------------------------------------------------------------
   // Standing, he gets a bigger head than the 18-px one at the wheel, so his face
-  // reads: feathered hair falling over the brow, defined brows, squinted eyes,
-  // a proper nose, stubble, a smirk. The mullet is the hair on the right.
+  // reads: blond hair swept back in strands (a lock falling forward), heavy
+  // brows, deep-set eyes, a long nose, stubble, a square jaw, an ear, a dark
+  // outline. The mullet is the hair on the right.
   const PAL = {
-    H: rgb('#fff2b0'), h: rgb('#f2c662'), d: rgb('#c48c36'), k: rgb('#7a4e22'),
-    S: rgb('#f8c6a6'), s: rgb('#e49c7c'), z: rgb('#b06a54'), e: rgb('#c4705a'), n: rgb('#a8624e'),
-    E: rgb('#2a1420'), W: rgb('#fff8f0'), b: rgb('#8a5a2a'), u: rgb('#d89a80'),
-    l: rgb('#c86a62'), T: rgb('#fff8ee'), m: rgb('#5a1a24'), G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
+    O: rgb('#24140e'), K: rgb('#24140e'), // outline: O on the hair (blows with it), K on the face
+    H: rgb('#fff2b4'), h: rgb('#f0c862'), d: rgb('#c8923a'), k: rgb('#8a5a22'),
+    B: rgb('#5a3618'), S: rgb('#f6bc94'), s: rgb('#de9c72'), z: rgb('#b8724e'), Z: rgb('#8a4a32'),
+    x: rgb('#c88866'), r: rgb('#a85a3e'), e: rgb('#c4705a'), n: rgb('#d89068'), N: rgb('#a8603e'),
+    E: rgb('#24140e'), W: rgb('#e6dad0'), I: rgb('#587494'), b: rgb('#8a5a2a'), u: rgb('#d89a80'),
+    l: rgb('#c06852'), T: rgb('#fff4ea'), m: rgb('#4a1418'), G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
   };
-  // three-quarter view, to the camera (22 x 24)
+  // to the camera, turned a touch to his right (22 x 24)
   const CAM = [
-    '.......kkkkkkk........',
-    '.....kkHHHHHHhkk......',
-    '...kkhHHHHHHHhhhkk....',
-    '..khhhHHHHHHHhhhddk...',
-    '..khhhhhhhhhhhhhddk...',
-    '.khhhhhhhhhhhhhhdddk..',
-    '.khhhhhhhhhhhhhhddddkk',
-    '.khSSdhhhhhhhhhhdddddk',
-    '.khbbbSSSbbbhhhhdddddk',
-    '.khWEESSsWEEShhhdddddk',
-    '.kSSsSSSsSsSSshhdddddk',
-    '.kSSSSSSsSSSSsehdddddk',
-    '..SSSSSSsSSSsseddddddk',
-    '..SSSSzszSSSssdddddddk',
-    '...SSSSSSlSSSsdddddddk',
-    '...uSllllzSSshddddddk.',
-    '....uSSSSSuSuhdddddk..',
-    '....SSuSuSSu.kdddddk..',
-    '.....uSuSuS..kddddk...',
-    '......SSSSS..kddddk...',
-    '......zzzzzz.kdddk....',
-    '......nnnnnn.kkkkk....',
-    '......nnnnnn..........',
-    '......nnnnnn..........',
+    '......OOOOOOOO........',
+    '....OhdHHhHhdhhO......',
+    '...OhhdHhdHHdhhhO.....',
+    '..OhhdhHhdhhhdHhhO....',
+    '..OhHhdhhdhhdhhHhdO...',
+    '.OhdhhdhhdhhdhhhdhhO..',
+    '.OhdhhhSSSSSSShhdhhO..',
+    '.OhdhhhSSSSSSSShhhhhO.',
+    '.OdhSdhSSSSSSSShhhhdO.',
+    '.OdKBBBSSSSSBBBKhhkdhO',
+    '.OdKSBBBBSBBBBsKKhhdhO',
+    '.KsKsWIWSSSWIWsKsKhddO',
+    '.KrKSsssSSsssssKrKkddO',
+    '.KsKSSSSSSsSSssKrKhddO',
+    '..KKzSSSsSsSSszKsKhddO',
+    '...KzSSsZsZsSszKKhkddO',
+    '...KxSsxSxSxZsxKhhhddO',
+    '...KSxzZZZZZSxsKhhhdhO',
+    '....KSxSsssSxSshhhhhO.',
+    '.....KSxSxSxSKhhhhhO..',
+    '......KKKKKKK.OhhhO...',
+    '......nNNNNNN..OO.....',
+    '......nnnnnnN.........',
+    '......nnnnnnN.........',
   ];
   // [x, y, pixel] edits for talking, blinking and glancing aside
-  const CAM_MOUTH = [[], [[5, 15, 'l'], [6, 15, 'm'], [7, 15, 'm'], [8, 15, 'l']],
-    [[5, 15, 'l'], [6, 15, 'T'], [7, 15, 'T'], [8, 15, 'l'], [5, 16, 'l'], [6, 16, 'm'], [7, 16, 'm'], [8, 16, 'l']]];
-  const CAM_BLINK = [[3, 9, 'z'], [4, 9, 'z'], [5, 9, 'z'], [9, 9, 'z'], [10, 9, 'z'], [11, 9, 'z']];
-  const CAM_SIDE = [[3, 9, 'E'], [4, 9, 'E'], [5, 9, 'W'], [9, 9, 'E'], [10, 9, 'E'], [11, 9, 'W']];
+  const CAM_MOUTH = [[], [[6, 17, 'Z'], [7, 17, 'm'], [8, 17, 'm'], [9, 17, 'm'], [10, 17, 'Z']],
+    [[6, 17, 'Z'], [7, 17, 'T'], [8, 17, 'T'], [9, 17, 'T'], [10, 17, 'Z'], [7, 18, 'm'], [8, 18, 'm'], [9, 18, 'm']]];
+  const CAM_BLINK = [[4, 11, 'z'], [5, 11, 'Z'], [6, 11, 'z'], [11, 11, 'z'], [12, 11, 'Z'], [13, 11, 'z']];
+  const CAM_SIDE = [[4, 11, 'I'], [5, 11, 'W'], [11, 11, 'I'], [12, 11, 'W']];
   // profile, looking up the street (left)
   const SIDE = [
-    '.........kkkkk........',
-    '.......kkHHHHhkk......',
-    '.....kkHHHHHHhhhkk....',
-    '.....kHHHHHHHhhhdk....',
-    '....khhhhhhhhhhhddk...',
-    '...khhhhhhhhhhhhdddk..',
-    '...khhhhhhhhhhhhdddk..',
-    '...khhhSSSShhhhhdddk..',
-    '...kbbbSSSShhhhhdddk..',
-    '...kEWSSSSshhhhhdddk..',
-    '...SSSsSSSshhhhhdddk..',
-    '..SSSSSSSSsehhhhdddk..',
-    '.SSsSSSSSSseehdddddk..',
-    '..SzSSSSSSshhhdddddk..',
-    '...SSSSSSSshhhdddddk..',
-    '...llzSSSSshhhdddddk..',
-    '...uSSSSSSshhhddddk...',
-    '....uSuSuSshhhdddk....',
-    '....SuSuSSshhhdddk....',
-    '.....SSSSSshhhddk.....',
-    '......zzzzzzhhddk.....',
-    '......nnnnnnhhdk......',
-    '......nnnnnnkkk.......',
-    '......nnnnnn..........',
+    '.....OOOOOOO..........',
+    '...OhHHHhHhhhO........',
+    '..OhddddhddhhhhO......',
+    '..OhHHhhhHHdhhhhO.....',
+    '.OddddhdddhhddhhhO....',
+    '.OhhhhHhhhddhhdhhhO...',
+    '.OhKSSShhhHhdHhdhhhO..',
+    '.OhKSSSSddhhhhdhdhhO..',
+    '..KSSSSSShdddhhdhhhO..',
+    '..KBBBBSdhhhhdhhhdhO..',
+    '...KIWzSsdhhKKdhhdhhO.',
+    '..KSssSSsdhsSrKdhhdhO.',
+    '.KSSSSSSSdhsSrKhhhdhO.',
+    'KSSssSSSsSSsSrKhhhdhO.',
+    '.KKZSSSSSsSszrKdhhdhO.',
+    '..KSxxSSSszSKKhdhhdhO.',
+    '..KZZzxSxSszKzhdhdhhO.',
+    '...KSxSxSssKzzhdhdhO..',
+    '..KxSxSxSzKzzzhdhdhO..',
+    '...KKKKKKKzzzzhhhhO...',
+    '......KnnNNNNOhhhO....',
+    '......KnnnnnN.OhO.....',
+    '......nnnnnnN.........',
+    '......nnnnnnN.........',
   ];
-  const SIDE_MOUTH = [[], [[3, 15, 'm']], [[3, 15, 'm'], [4, 15, 'm'], [3, 16, 'm']]];
-  const SIDE_BLINK = [[4, 9, 'z'], [5, 9, 'z']];
+  const SIDE_MOUTH = [[], [[3, 16, 'm'], [4, 16, 'm']], [[3, 16, 'm'], [4, 16, 'm'], [3, 17, 'm'], [4, 17, 'T']]];
+  const SIDE_BLINK = [[4, 10, 'Z'], [5, 10, 'z']];
   // the small profile from the car (cars.js), for the moment he's in the seat
   const SIDE_SMALL = [
     '......kkkkkk......',
@@ -4131,7 +4134,7 @@
       const o = y >= 9 ? Math.round(sway * ((y - 8) / (h - 9)) * 2.4) : y <= 2 ? Math.round(sway * 0.8) : 0;
       [...row].forEach((ch, x) => {
         if (ch === '.') return;
-        const hair = ch === 'h' || ch === 'H' || ch === 'd' || ch === 'k';
+        const hair = ch === 'h' || ch === 'H' || ch === 'd' || ch === 'k' || ch === 'O';
         const dx = hair && x >= 13 ? o : 0;
         const c = PAL[ch];
         const px = flip ? w - 1 - (x + dx) : x + dx;
@@ -4325,16 +4328,18 @@
     } else {
       pb = headCanvas(SIDE, [...(blink ? SIDE_BLINK : []), ...(SIDE_MOUTH[mouth] || [])], sway, view === 'right');
     }
-    // the same neon light as the body: pink on top, cyan on the right edge
-    const src = pb.d.slice(), w = pb.w, h = pb.h;
+    // the same neon light as the body: pink on top, cyan on the right edge,
+    // on the first pixels inside the outline (the outline itself stays dark)
+    const src = pb.d.slice(), w = pb.w, h = pb.h, ink = ND.pack(PAL.O[0], PAL.O[1], PAL.O[2]);
     const on = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && src[yy * w + xx] >>> 24;
+    const ink1 = (xx, yy) => on(xx, yy) && src[yy * w + xx] === ink;
     for (let yy = 0; yy < h; yy++)
       for (let xx = 0; xx < w; xx++) {
         const i = yy * w + xx;
-        if (!(src[i] >>> 24)) continue;
+        if (!(src[i] >>> 24) || src[i] === ink) continue;
         let c = [src[i] & 255, (src[i] >> 8) & 255, (src[i] >> 16) & 255];
-        if (!on(xx, yy - 1)) c = ND.mix(c, [255, 130, 225], 0.5);
-        if (!on(xx + 1, yy)) c = ND.mix(c, [90, 230, 255], 0.3);
+        if (!on(xx, yy - 1) || (ink1(xx, yy - 1) && !on(xx, yy - 2))) c = ND.mix(c, [255, 130, 225], 0.45);
+        if (!on(xx + 1, yy) || (ink1(xx + 1, yy) && !on(xx + 2, yy))) c = ND.mix(c, [90, 230, 255], 0.3);
         pb.set(xx, yy, ND.pack(c[0], c[1], c[2]));
       }
     return pb.canvas();
@@ -9071,7 +9076,9 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
     }
     mouthWorld() {
       const [ox, oy] = this.origin();
-      return [ox + this.D.HX + 8, oy + this.D.HY + 13];
+      // his mouth on the head map: to the camera, or in profile looking left
+      const [mx, my] = this.view === 'left' ? [3, 16] : [9, 17];
+      return [ox + this.D.HX + 1 + mx, oy + this.D.HY + my];
     }
 
     // --- drawing -----------------------------------------------------------------------

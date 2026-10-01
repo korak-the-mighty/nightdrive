@@ -279,7 +279,9 @@
     }
     mouthWorld() {
       const [ox, oy] = this.origin();
-      return [ox + this.D.HX + 8, oy + this.D.HY + 13];
+      // his mouth on the head map: to the camera, or in profile looking left
+      const [mx, my] = this.view === 'left' ? [3, 16] : [9, 17];
+      return [ox + this.D.HX + 1 + mx, oy + this.D.HY + my];
     }
 
     // --- drawing -----------------------------------------------------------------------
