@@ -644,18 +644,17 @@
       }
     }
 
-    // Oncoming traffic, flashing past in front of us behind the bushes: mirrored
-    // to face right, drawn bigger (they're closer), a touch shadowed and
-    // smeared by speed so they never steal the show.
+    // Oncoming traffic in the lane in front of the centre line: mirrored to face
+    // right, drawn bigger (they're closer), a touch shadowed and smeared by speed.
     drawOncoming(R) {
       const w = this.world;
       if (!w.oncoming.length) return;
-      const { c, g } = R, f = ND.fAt(Y.ONC), K = ND.ONC_SCALE;
+      const { c, g } = R, f = ND.fAt(Y.ONC);
       const a = this.oncAX, b = this.oncBX;
       for (const o of w.oncoming) {
-        const S = o.sp, dw = Math.round(S.w * K), dh = Math.round(S.h * K);
-        // anything tall (a ladder, a giant cone) may cover our wheels, never the cabin: sink it a little
-        const sink = Math.max(0, Y.CAR - 36 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
+        const S = o.sp, K = o.k || ND.ONC_SCALE, dw = Math.round(S.w * K), dh = Math.round(S.h * K);
+        // anything tall (a ladder, a giant cone) may cover our lower body, never the cabin: sink it a little
+        const sink = Math.max(0, Y.CAR - 46 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
         const x = Math.round(CX + (R.D - o.P) * f), y = Y.ONC - Math.round(S.ground * K) + sink;
         if (x > W + 20 || x + dw < -40) continue;
         a.clearRect(0, 0, S.w + 2, S.h + 2);
@@ -844,20 +843,21 @@
       const fr = Math.floor((spin / WF.period) * WF.frames.length) % WF.frames.length;
       for (const [wx, wy] of ND.HERO.WHEELS) cx.drawImage(WF.frames[fr], wx - WF.R, wy - WF.R);
       // driving lights: a beam from the bumper lamp, angled down to where it
-      // lands on the road ahead (stronger in rain and mist)
+      // lands on the road ahead (stronger in rain and mist). With the pop-ups
+      // open, the light comes from them, not from down at the bumper.
       const c = this.c, g0 = this.g, BA = this.fx.beamAir, BG = this.fx.beamGround;
-      const air = (0.2 + 0.45 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights;
+      const air = (0.2 + 0.45 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights * (1 - 0.9 * pop);
       const ax = x + 1 - BA.ax, ay = y + h.bob + 46 - BA.ay, gx = x + 1 - BG.width, gy = Y.CAR - 11;
       if (lights > 0) {
         c.globalCompositeOperation = 'lighter';
-        c.globalAlpha = 0.55 * lights;
+        c.globalAlpha = 0.55 * lights * (1 - 0.5 * pop);
         c.drawImage(BG, gx, gy);
         c.drawImage(this.fx.redPool, x + 262, Y.CAR - 5);
         c.globalAlpha = air;
         c.drawImage(BA.c, ax, ay);
         c.globalAlpha = 1;
         c.globalCompositeOperation = 'source-over';
-        g0.globalAlpha = 0.35 * lights;
+        g0.globalAlpha = 0.35 * lights * (1 - 0.5 * pop);
         g0.drawImage(BG, gx, gy);
         g0.globalAlpha = air * 0.6;
         g0.drawImage(BA.c, ax, ay);

@@ -229,14 +229,14 @@
   // v: own speed towards us (the ordinary cars do 3.4-4.8). The jokes take it easy so
   // they're on screen for about two seconds; the chase is the exception.
   ND.ONCOMING_SPECIALS = {
-    fire: { sprite: 'fire', v: 1.0, siren: 'fire', talk: 'oc-fire', engine: 70, loud: 0.28 },
-    ambulance: { sprite: 'ambulance', v: 1.6, siren: 'wail', talk: 'oc-ambulance' },
+    fire: { sprite: 'fire', scale: 1.5, v: 1.0, siren: 'fire', talk: 'oc-fire', engine: 70, loud: 0.28 },
+    ambulance: { sprite: 'ambulance', scale: 1.5, v: 1.6, siren: 'wail', talk: 'oc-ambulance' },
     chase: { sprite: 'sports', v: 5.6, engine: 150, loud: 0.3, then: 'cops', gap: 40 },
     cops: { sprite: 'police', v: 5.2, siren: 'yelp', talk: 'oc-chase', follow: true },
-    icecream: { sprite: 'icecream', v: 0.3, tune: 'icecream', talk: 'oc-icecream' },
-    hotdog: { sprite: 'hotdog', v: 0.3, tune: 'hotdog', talk: 'oc-hotdog' },
-    limo: { sprite: 'limo', v: 1.0, talk: 'oc-limo', engine: 80 },
-    party: { sprite: 'party', v: 0.6, tune: 'party', talk: 'oc-party' },
+    icecream: { sprite: 'icecream', scale: 1.5, v: 0.3, tune: 'icecream', talk: 'oc-icecream' },
+    hotdog: { sprite: 'hotdog', scale: 1.5, v: 0.3, tune: 'hotdog', talk: 'oc-hotdog' },
+    limo: { sprite: 'limo', scale: 1.5, v: 1.0, talk: 'oc-limo', engine: 80 },
+    party: { sprite: 'party', scale: 1.5, v: 0.6, tune: 'party', talk: 'oc-party' },
   };
 
   ND.genVehicles = function (seed) {

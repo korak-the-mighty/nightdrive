@@ -28,7 +28,7 @@
     LINE: 300,    // lane line
     ONC: 330,     // oncoming lane ground contact (the lane in front of the centre line)
   };
-  ND.ONC_SCALE = 1.4; // oncoming cars are drawn this much bigger than the far lane's
+  ND.ONC_SCALE = 1.7; // oncoming cars are drawn this much bigger than the far lane's (the big specials 1.5)
 
   // ---------------------------------------------------------------------------
   // Deterministic RNG (mulberry32) + hashing.

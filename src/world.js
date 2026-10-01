@@ -383,22 +383,25 @@
     spawnOncoming(kind) {
       const r = this.r, f = ND.fAt(Y.ONC), V = this.vehicles;
       if (!kind) {
-        // mostly ordinary cars; a joke vehicle at most once a minute (never twice in a row)
+        // mostly ordinary cars; the first joke vehicle about 15 s into the drive,
+        // then one every minute or so (never the same twice in a row)
         const S = ND.ONCOMING_SPECIALS || {};
         const specials = Object.keys(S).filter((k) => !S[k].follow && k !== this.lastSpecial);
-        const due = this.tick - (this.lastSpecialAt ?? -1e9) >= 60 * 60;
-        kind = due && specials.length && r() < 0.2 ? r.pick(specials) : 'car';
+        const n = (this.oncCount = (this.oncCount || 0) + 1);
+        const due = this.lastSpecialAt == null ? n >= 4 : this.tick - this.lastSpecialAt >= 60 * 45 && r() < 0.25;
+        kind = due && specials.length ? r.pick(specials) : 'car';
       }
       const spec = (ND.ONCOMING_SPECIALS || {})[kind];
       if (kind !== 'car' && !(spec && spec.follow)) { this.lastSpecialAt = this.tick; this.lastSpecial = kind; }
       const sp = kind === 'car' ? r.pick(this.oncomingPool) : V[spec.sprite];
       if (!sp) return;
       const v = kind === 'car' ? r.range(3.4, 4.8) : spec.v;
-      const x0 = -sp.w * ND.ONC_SCALE - 24;
-      this.oncoming.push({ P: this.D - (x0 - CX) / f, v, sp, wa: 0, kind, born: this.tick, hi: kind === 'car' && r() < 0.12 });
+      const K = (spec && spec.scale) || ND.ONC_SCALE;
+      const x0 = -sp.w * K - 24;
+      this.oncoming.push({ P: this.D - (x0 - CX) / f, v, sp, k: K, wa: 0, kind, born: this.tick, hi: kind === 'car' && r() < 0.12 });
       // how long until it passes the middle of the screen, and how long it's on screen
       const rel = (this.speed + v) * f * 60;
-      ND.bus.emit('oncoming', { kind, cross: (CX - x0 - sp.w * ND.ONC_SCALE / 2) / rel, dur: (W + sp.w * ND.ONC_SCALE) / rel, spec });
+      ND.bus.emit('oncoming', { kind, cross: (CX - x0 - sp.w * K / 2) / rel, dur: (W + sp.w * K) / rel, spec });
       if (spec && spec.then) this.pendingOncoming = { kind: spec.then, at: this.tick + spec.gap };
     }
 

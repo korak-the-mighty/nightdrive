@@ -119,7 +119,7 @@
     LINE: 300,    // lane line
     ONC: 330,     // oncoming lane ground contact (the lane in front of the centre line)
   };
-  ND.ONC_SCALE = 1.4; // oncoming cars are drawn this much bigger than the far lane's
+  ND.ONC_SCALE = 1.7; // oncoming cars are drawn this much bigger than the far lane's (the big specials 1.5)
 
   // ---------------------------------------------------------------------------
   // Deterministic RNG (mulberry32) + hashing.
@@ -3983,14 +3983,14 @@
   // v: own speed towards us (the ordinary cars do 3.4-4.8). The jokes take it easy so
   // they're on screen for about two seconds; the chase is the exception.
   ND.ONCOMING_SPECIALS = {
-    fire: { sprite: 'fire', v: 1.0, siren: 'fire', talk: 'oc-fire', engine: 70, loud: 0.28 },
-    ambulance: { sprite: 'ambulance', v: 1.6, siren: 'wail', talk: 'oc-ambulance' },
+    fire: { sprite: 'fire', scale: 1.5, v: 1.0, siren: 'fire', talk: 'oc-fire', engine: 70, loud: 0.28 },
+    ambulance: { sprite: 'ambulance', scale: 1.5, v: 1.6, siren: 'wail', talk: 'oc-ambulance' },
     chase: { sprite: 'sports', v: 5.6, engine: 150, loud: 0.3, then: 'cops', gap: 40 },
     cops: { sprite: 'police', v: 5.2, siren: 'yelp', talk: 'oc-chase', follow: true },
-    icecream: { sprite: 'icecream', v: 0.3, tune: 'icecream', talk: 'oc-icecream' },
-    hotdog: { sprite: 'hotdog', v: 0.3, tune: 'hotdog', talk: 'oc-hotdog' },
-    limo: { sprite: 'limo', v: 1.0, talk: 'oc-limo', engine: 80 },
-    party: { sprite: 'party', v: 0.6, tune: 'party', talk: 'oc-party' },
+    icecream: { sprite: 'icecream', scale: 1.5, v: 0.3, tune: 'icecream', talk: 'oc-icecream' },
+    hotdog: { sprite: 'hotdog', scale: 1.5, v: 0.3, tune: 'hotdog', talk: 'oc-hotdog' },
+    limo: { sprite: 'limo', scale: 1.5, v: 1.0, talk: 'oc-limo', engine: 80 },
+    party: { sprite: 'party', scale: 1.5, v: 0.6, tune: 'party', talk: 'oc-party' },
   };
 
   ND.genVehicles = function (seed) {
@@ -9582,22 +9582,25 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
     spawnOncoming(kind) {
       const r = this.r, f = ND.fAt(Y.ONC), V = this.vehicles;
       if (!kind) {
-        // mostly ordinary cars; a joke vehicle at most once a minute (never twice in a row)
+        // mostly ordinary cars; the first joke vehicle about 15 s into the drive,
+        // then one every minute or so (never the same twice in a row)
         const S = ND.ONCOMING_SPECIALS || {};
         const specials = Object.keys(S).filter((k) => !S[k].follow && k !== this.lastSpecial);
-        const due = this.tick - (this.lastSpecialAt ?? -1e9) >= 60 * 60;
-        kind = due && specials.length && r() < 0.2 ? r.pick(specials) : 'car';
+        const n = (this.oncCount = (this.oncCount || 0) + 1);
+        const due = this.lastSpecialAt == null ? n >= 4 : this.tick - this.lastSpecialAt >= 60 * 45 && r() < 0.25;
+        kind = due && specials.length ? r.pick(specials) : 'car';
       }
       const spec = (ND.ONCOMING_SPECIALS || {})[kind];
       if (kind !== 'car' && !(spec && spec.follow)) { this.lastSpecialAt = this.tick; this.lastSpecial = kind; }
       const sp = kind === 'car' ? r.pick(this.oncomingPool) : V[spec.sprite];
       if (!sp) return;
       const v = kind === 'car' ? r.range(3.4, 4.8) : spec.v;
-      const x0 = -sp.w * ND.ONC_SCALE - 24;
-      this.oncoming.push({ P: this.D - (x0 - CX) / f, v, sp, wa: 0, kind, born: this.tick, hi: kind === 'car' && r() < 0.12 });
+      const K = (spec && spec.scale) || ND.ONC_SCALE;
+      const x0 = -sp.w * K - 24;
+      this.oncoming.push({ P: this.D - (x0 - CX) / f, v, sp, k: K, wa: 0, kind, born: this.tick, hi: kind === 'car' && r() < 0.12 });
       // how long until it passes the middle of the screen, and how long it's on screen
       const rel = (this.speed + v) * f * 60;
-      ND.bus.emit('oncoming', { kind, cross: (CX - x0 - sp.w * ND.ONC_SCALE / 2) / rel, dur: (W + sp.w * ND.ONC_SCALE) / rel, spec });
+      ND.bus.emit('oncoming', { kind, cross: (CX - x0 - sp.w * K / 2) / rel, dur: (W + sp.w * K) / rel, spec });
       if (spec && spec.then) this.pendingOncoming = { kind: spec.then, at: this.tick + spec.gap };
     }
 
@@ -10433,18 +10436,17 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
       }
     }
 
-    // Oncoming traffic, flashing past in front of us behind the bushes: mirrored
-    // to face right, drawn bigger (they're closer), a touch shadowed and
-    // smeared by speed so they never steal the show.
+    // Oncoming traffic in the lane in front of the centre line: mirrored to face
+    // right, drawn bigger (they're closer), a touch shadowed and smeared by speed.
     drawOncoming(R) {
       const w = this.world;
       if (!w.oncoming.length) return;
-      const { c, g } = R, f = ND.fAt(Y.ONC), K = ND.ONC_SCALE;
+      const { c, g } = R, f = ND.fAt(Y.ONC);
       const a = this.oncAX, b = this.oncBX;
       for (const o of w.oncoming) {
-        const S = o.sp, dw = Math.round(S.w * K), dh = Math.round(S.h * K);
-        // anything tall (a ladder, a giant cone) may cover our wheels, never the cabin: sink it a little
-        const sink = Math.max(0, Y.CAR - 36 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
+        const S = o.sp, K = o.k || ND.ONC_SCALE, dw = Math.round(S.w * K), dh = Math.round(S.h * K);
+        // anything tall (a ladder, a giant cone) may cover our lower body, never the cabin: sink it a little
+        const sink = Math.max(0, Y.CAR - 46 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
         const x = Math.round(CX + (R.D - o.P) * f), y = Y.ONC - Math.round(S.ground * K) + sink;
         if (x > W + 20 || x + dw < -40) continue;
         a.clearRect(0, 0, S.w + 2, S.h + 2);
@@ -10633,20 +10635,21 @@ window.ND_VOCALS = {"made":"2026-10-01T00:41:35.660Z","clips":[{"id":"night-driv
       const fr = Math.floor((spin / WF.period) * WF.frames.length) % WF.frames.length;
       for (const [wx, wy] of ND.HERO.WHEELS) cx.drawImage(WF.frames[fr], wx - WF.R, wy - WF.R);
       // driving lights: a beam from the bumper lamp, angled down to where it
-      // lands on the road ahead (stronger in rain and mist)
+      // lands on the road ahead (stronger in rain and mist). With the pop-ups
+      // open, the light comes from them, not from down at the bumper.
       const c = this.c, g0 = this.g, BA = this.fx.beamAir, BG = this.fx.beamGround;
-      const air = (0.2 + 0.45 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights;
+      const air = (0.2 + 0.45 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * lights * (1 - 0.9 * pop);
       const ax = x + 1 - BA.ax, ay = y + h.bob + 46 - BA.ay, gx = x + 1 - BG.width, gy = Y.CAR - 11;
       if (lights > 0) {
         c.globalCompositeOperation = 'lighter';
-        c.globalAlpha = 0.55 * lights;
+        c.globalAlpha = 0.55 * lights * (1 - 0.5 * pop);
         c.drawImage(BG, gx, gy);
         c.drawImage(this.fx.redPool, x + 262, Y.CAR - 5);
         c.globalAlpha = air;
         c.drawImage(BA.c, ax, ay);
         c.globalAlpha = 1;
         c.globalCompositeOperation = 'source-over';
-        g0.globalAlpha = 0.35 * lights;
+        g0.globalAlpha = 0.35 * lights * (1 - 0.5 * pop);
         g0.drawImage(BG, gx, gy);
         g0.globalAlpha = air * 0.6;
         g0.drawImage(BA.c, ax, ay);
