@@ -145,6 +145,9 @@
         cone: ND.genCone(64, 118, [255, 186, 110]),
         beamAir: ND.genBeam(230, 16, [255, 244, 222]),
         beamGround: ND.genGroundBeam(220, 22, [255, 236, 200]),
+        // the pop-ups' beam at each tilt it sweeps through as they flip open
+        popBeams: Array.from({ length: 12 }, (_, k) => ND.genBeamAt(300, 18, [255, 246, 226], -0.04 + (k / 11) * 1.24, 1)),
+        popGround: ND.genGroundBeam(260, 26, [255, 240, 210]),
         tBeamAir: ND.genBeam(130, 9, [255, 240, 210]),
         tBeamGround: ND.genGroundBeam(130, 12, [255, 230, 190]),
         redPool: ND.genPool(64, 14, [255, 40, 60], 0.7),
@@ -709,6 +712,10 @@
       const cx = this.carX, HW = ND.HERO.W, HH = ND.HERO.H;
       cx.clearRect(0, 0, HW, HH);
       cx.drawImage(h.body.c, 0, h.bob);
+      // the pop-up headlight, shut in the hood or flipping open (eased: a motor)
+      const PF = h.body.pop.frames, pe = h.pods * h.pods * (3 - 2 * h.pods);
+      const pf = PF[Math.round(pe * (PF.length - 1))];
+      cx.drawImage(pf.c, pf.ox, pf.oy + h.bob);
       const x = h.x + (h.dx || 0), y = h.y;
       // live neon reflections sliding along the paint (last frame's bloom, mirrored)
       if (this.q >= 1) {
@@ -748,21 +755,17 @@
           cx.globalCompositeOperation = 'source-over';
         }
       }
-      // lamps dark until the engine starts; pop-up headlights rise with them
-      const lights = h.lights;
+      // lamps dark until the engine starts; the pop-up's glass lights as it flips
+      const lights = h.lights, pop = lights * pf.on;
       if (lights < 1) {
         cx.globalAlpha = 1 - lights;
         cx.drawImage(h.body.lampsOff, 0, h.bob);
         cx.globalAlpha = 1;
       }
-      if (h.pods > 0) {
-        const up = Math.max(1, Math.round(h.pods * 4)), by = 36 + h.bob;
-        for (let k = 0; k < up; k++) {
-          cx.fillStyle = k === up - 1 ? '#ffffff' : k === 0 ? '#8a86a8' : '#e6e2f2';
-          cx.fillRect(20, by - k, 11, 1);
-        }
-        cx.fillStyle = lights > 0.5 ? '#fffbe0' : '#9a96b0';
-        cx.fillRect(20, by - up + 1, 1, Math.max(1, up - 1));
+      if (pop > 0) {
+        cx.globalAlpha = pop;
+        cx.drawImage(pf.lit, pf.ox, pf.oy + h.bob);
+        cx.globalAlpha = 1;
       }
       // the door, swung out towards us from its front hinge, and him getting in
       if (h.door > 0) {
@@ -856,6 +859,25 @@
         g0.drawImage(this.fx.beamAir, x - 226, y + 46 - 16);
         g0.globalAlpha = 1;
       }
+      // the pop-ups: a long beam that swings down out of the sky as they flip
+      // open, standing out in the rain and mist, and light far down the road
+      if (pop > 0) {
+        const B = this.fx.popBeams, k = ND.clamp(Math.round(((pf.e + 0.04) / 1.24) * (B.length - 1)), 0, B.length - 1);
+        const bx = Math.round(x + pf.lens[0]) - B[k].ax, by = Math.round(y + h.bob + pf.lens[1]) - B[k].ay;
+        const haze = pop * (0.15 + 0.65 * Math.max(R.weather.v.rain, R.weather.v.fog));
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = haze;
+        c.drawImage(B[k].c, bx, by);
+        c.globalAlpha = 0.45 * pop * pf.p;
+        c.drawImage(this.fx.popGround, x - 300, Y.CAR - 14);
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = 'source-over';
+        g0.globalAlpha = haze * 0.4;
+        g0.drawImage(B[k].c, bx, by);
+        g0.globalAlpha = 0.3 * pop * pf.p;
+        g0.drawImage(this.fx.popGround, x - 300, Y.CAR - 14);
+        g0.globalAlpha = 1;
+      }
       this.reflect(this.carC, x, Y.CAR, HH, 0.34, R.t, 80);
       this.c.drawImage(this.carC, x, y);
       this.occlude(this.carC, x, y);
@@ -868,7 +890,17 @@
         g.fillRect(x + 293, Y.CAR + 3, 6, 40);
         g.fillStyle = 'rgba(255,150,30,0.35)';
         g.fillRect(x + 1, Y.CAR + 6, 6, 26);
-        if (h.pods > 0.5) { g.fillStyle = 'rgba(255,250,220,0.9)'; g.fillRect(x + 18, y + 32 + h.bob, 4, 4); }
+        g.globalAlpha = 1;
+      }
+      if (pop > 0) {
+        // the lit glass blooms, and streaks down the wet road below it
+        const lx = Math.round(x + pf.lens[0]), ly = Math.round(y + h.bob + pf.lens[1]);
+        g.globalAlpha = pop;
+        g.drawImage(pf.lit, x + pf.ox, y + pf.oy + h.bob);
+        g.fillStyle = 'rgba(255,248,225,0.8)';
+        g.fillRect(lx - 2, ly - 2, 3, 4);
+        g.fillStyle = 'rgba(255,248,225,0.4)';
+        g.fillRect(lx - 1, Y.CAR + 3, 3, 34);
         g.globalAlpha = 1;
       }
       // cigarette ember glow + smoke trail streaming back in the wind

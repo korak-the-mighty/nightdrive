@@ -407,6 +407,7 @@
     for (let y = 27; y <= 41; y++) for (let x = 293; x <= 298; x++) off.set(x, y, P((y - 27) % 3 === 2 ? rgb('#2a0a14') : ND.mix(rgb('#6a1a2a'), rgb('#a05a6a'), x > 296 ? 0.3 : 0)));
     for (let x = 277; x <= 282; x++) off.set(x, 44, P(rgb('#5a1422')));
     body.lampsOff = off.canvas();
+    body.pop = genPopups();
 
     // Paint mask for live environment reflections: strongest on the upper
     // flank above the paint's horizon line, faint on the lower flank.
@@ -424,6 +425,78 @@
     mask.rect(290, 25, 10, 20, 0);
     body.mask = mask.canvas();
     return body;
+  }
+
+  // Pop-up headlight, the Porsche 928 kind: the lamp lies in the hood with its
+  // glass facing the sky, and flips forward on a hinge at its front edge until
+  // the glass faces the road. Frame 0 is shut, the last one open. Each frame
+  // has the lamp (glass unlit), the glass lit, where the light leaves the glass,
+  // which way it points (radians above level) and how far the lamp is on.
+  const POP = { x: 19, L: 8, T: 7, N: 16 };
+  function genPopups() {
+    const { x: hx, L, T, N } = POP;
+    const P = (c) => ND.pack(c[0], c[1], c[2]);
+    const hy = topY(hx) + 1; // the hinge, just under the hood's top edge
+    const phi0 = Math.atan((topY(hx) - topY(hx + L)) / L); // lying along the hood
+    const edge = (x) => Math.ceil(topY(x + 0.5) - 0.5); // the hood's top row
+    const ox = hx - 3, oy = Math.floor(hy) - L - 3, w = L + T + 7, h = L + 8;
+    const glass = rgb('#a49ce0'), glassD = rgb('#7a72b8'), glint = rgb('#ffffff'), glassUp = rgb('#4a4486');
+    const chrome = rgb('#c4bedc'), chromeD = rgb('#8c88a8'), hole = rgb('#120e20'), holeL = rgb('#3a3458');
+    const shell = rgb('#e2dcf2'), shellL = rgb('#ffffff'), shellD = rgb('#8a82ac'), shellK = rgb('#5e5684');
+    const frames = [];
+    for (let f = 0; f < N; f++) {
+      const p = f / (N - 1);
+      const phi = phi0 + (Math.PI / 2 - phi0) * p;
+      const cs = Math.cos(phi), sn = Math.sin(phi);
+      const pb = new ND.PB(w, h), lit = new ND.PB(w, h);
+      const at = (x, y, c, pbx = pb) => pbx.set(x - ox, y - oy, P(c));
+      // in the lamp's own frame: u along the glass (front to back when shut),
+      // v from the glass down into the housing; the back corners are rounded
+      const local = (x, y) => {
+        const dx = x + 0.5 - hx, dy = y + 0.5 - hy;
+        return [dx * cs - dy * sn, dx * sn + dy * cs];
+      };
+      const inside = (x, y) => {
+        const [u, v] = local(x, y);
+        if (u < 0 || u > L || v < 0 || v > T) return false;
+        const cu = u < 2 ? 2 : u > L - 2 ? L - 2 : u;
+        return v < T - 2 || Math.hypot(u - cu, v - (T - 2)) <= 2;
+      };
+      for (let x = hx; x < hx + L; x++) {
+        const e = edge(x);
+        if (f === 0) {
+          // shut: the lens lies in the hood facing the sky, glass in a chrome ring
+          if (x === hx || x === hx + L - 1) continue;
+          const end = x === hx + 1 || x === hx + L - 2;
+          at(x, e + 1, end ? chrome : x === hx + 2 ? glint : glass);
+          at(x, e + 2, end ? chromeD : glassD);
+        } else {
+          at(x, e + 1, hole); // the slot it rises out of
+          at(x, e + 2, holeL);
+        }
+      }
+      if (f > 0) {
+        for (let y = oy; y < oy + h; y++)
+          for (let x = ox; x < ox + w; x++) {
+            if (y + 0.5 >= topY(x + 0.5) + 1 || !inside(x, y)) continue; // still inside the body
+            const [u, v] = local(x, y);
+            if (v < 2) {
+              const end = u < 1.1 || u > L - 1.1;
+              at(x, y, end ? chrome : Math.abs(u - L * 0.7) < 0.6 ? glint : glassUp);
+              if (!end) at(x, y, Math.abs(u - L / 2) < 1.6 ? [255, 255, 255] : [255, 246, 214], lit);
+            } else if (v < 2.9) at(x, y, chrome);
+            else if (!inside(x + 1, y) || v > T - 1.1) at(x, y, shellK); // the back, turned away
+            else at(x, y, !inside(x, y - 1) ? shellL : v > T - 2.2 || !inside(x, y + 1) ? shellD : shell);
+          }
+      }
+      frames.push({
+        c: pb.canvas(), lit: lit.canvas(), ox, oy, p,
+        lens: [hx + (L / 2) * cs - 0.5 * sn, hy - (L / 2) * sn - 0.5 * cs],
+        e: Math.PI / 2 - phi - 0.04 * p, // aimed a touch down at the road once open
+        on: ND.clamp((phi - 0.35) / 0.45, 0, 1),
+      });
+    }
+    return { frames };
   }
 
   // Five-spoke star rims with motion blur; 12 frames cover 72 degrees.

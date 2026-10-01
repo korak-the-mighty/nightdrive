@@ -772,6 +772,7 @@
       ND.bus.on('blimp', () => this.request('blimp', 30));
       ND.bus.on('arm-out', () => this.request('smoke'));
       ND.bus.on('window-up', () => this.request('window'));
+      ND.bus.on('pods', (e) => { if (this.enabled) this.sfxPopup(this.ctx.currentTime + 0.02, e.up); });
       ND.bus.on('speed', (e) => this.request(e.zone, 8));
       this.emit('start');
     }
@@ -1233,6 +1234,28 @@
         og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.7, t + 0.006); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
         o.connect(og).connect(N.master); o.start(t); o.stop(t + 0.25);
       }
+    }
+    // The pop-up headlights: a little electric motor, and a soft thunk as they seat.
+    sfxPopup(t, up) {
+      const c = this.ctx, N = this.n, dur = 0.7;
+      const o = c.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(up ? 150 : 175, t);
+      o.frequency.linearRampToValueAtTime(up ? 185 : 140, t + dur);
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 1.4;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.05, t + 0.06);
+      g.gain.setValueAtTime(0.05, t + dur - 0.1);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(bp).connect(g).connect(N.master);
+      o.start(t); o.stop(t + dur + 0.05);
+      const k = c.createOscillator(); k.type = 'sine';
+      k.frequency.setValueAtTime(140, t + dur - 0.04); k.frequency.exponentialRampToValueAtTime(70, t + dur + 0.08);
+      const kg = c.createGain();
+      kg.gain.setValueAtTime(0.0001, t + dur - 0.04);
+      kg.gain.exponentialRampToValueAtTime(0.18, t + dur - 0.035);
+      kg.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.1);
+      k.connect(kg).connect(N.master); k.start(t + dur - 0.05); k.stop(t + dur + 0.15);
     }
     // Flat-12: the starter turns, it catches with a blip, then idles until we go.
     engineStart(t) {
