@@ -1,6 +1,6 @@
 /* Nightdrive — the car stereo: an 80s head unit in the corner of the picture.
- * One station per sound — 88.5 NOIR, 92.3 ELECTRO, 97.9 MIAMI, 103.5 AMIGA —
- * and 107.7 NIGHT FM, which plays them all. ←/→, the presets, the tuning knob or
+ * One station per sound — 88.5 NOIR, 92.3 ELECTRO, 97.9 MIAMI, 100.7 COSMIC,
+ * 103.5 AMIGA — and 107.7 NIGHT FM, which plays them all. ←/→, the presets, the tuning knob or
  * dragging the needle along the band changes station, with static in between.
  * It sits over the picture (not in it), so it never shows up in a recording.
  */
@@ -12,6 +12,7 @@
     { f: 88.5, name: 'NOIR', style: 'noir', slogan: 'LATE AND LONELY' },
     { f: 92.3, name: 'ELECTRO', style: 'electro', slogan: 'ROBOTS ONLY' },
     { f: 97.9, name: 'MIAMI', style: 'miami', slogan: 'PASTEL HITS' },
+    { f: 100.7, name: 'COSMIC', style: 'cosmic', slogan: 'ELECTRO FROM ORBIT' },
     { f: 103.5, name: 'AMIGA', style: 'amiga', slogan: '16-BIT GOLD' },
     { f: 107.7, name: 'NIGHT FM', style: null, slogan: 'THE ALL NIGHT MIX' },
   ];
@@ -21,7 +22,7 @@
   const LCD = { x: 22, y: 3, w: 84, h: 30 };
   const BAND = { x0: 27, x1: 101, y: 21 };
   const KNOB_L = { x: 11, y: 16 }, KNOB_R = { x: 116, y: 16 }, KR = 7;
-  const PRESET = { x: 22, y: 35, w: 16, h: 7, gap: 1 };
+  const PRESET = { x: 22, y: 35, w: 13, h: 7, gap: 1 };
   const SETTLE = 0.4; // seconds of hiss fading out once the needle stops
   const fx = (f) => BAND.x0 + ((f - F0) / (F1 - F0)) * (BAND.x1 - BAND.x0);
   const xf = (x) => ND.clamp(F0 + ((x - BAND.x0) / (BAND.x1 - BAND.x0)) * (F1 - F0), F0, F1);

@@ -26,7 +26,7 @@
     FAR: 262,     // far traffic lane ground contact
     CAR: 276,     // hero car ground contact (f = 1)
     LINE: 300,    // lane line
-    ONC: 376,     // oncoming lane ground contact (in front of us, behind the bushes; below the frame edge)
+    ONC: 330,     // oncoming lane ground contact (the lane in front of the centre line)
   };
   ND.ONC_SCALE = 1.4; // oncoming cars are drawn this much bigger than the far lane's
 

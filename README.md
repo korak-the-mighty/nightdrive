@@ -33,10 +33,10 @@ MAYBE VACANCY. Every few minutes the tourist board's blimp drifts over the
 city, scrolling one-liners on its LED sign ("LOST: ONE ALLIGATOR. ANSWERS TO
 ELVIS"). It stays grounded in a storm.
 
-Oncoming traffic flashes past every 10–20 seconds in the lane in front of us,
-half hidden behind the median bushes (headlights first, with a whoosh that
-pans across the speakers). Most of it is ordinary cars. Now and then (never
-the same joke twice in a row) it's something else: a fire truck with a
+Oncoming traffic flashes past every few seconds in the lane on the other side
+of the centre line (headlights first, reflected in the wet road, with a
+whoosh that pans across the speakers). Most of it is ordinary cars. At most
+once a minute (never the same joke twice in a row) it's something else: a fire truck with a
 dalmatian riding along, an ambulance, a red sports car with a police cruiser
 right on its tail, an ice-cream van and a hot-dog van (each with a giant
 snack on the roof), a white stretch limo with someone
@@ -48,7 +48,7 @@ air horn or a jingle. The driver usually has something to say about them
 The car stereo sits in the top-left corner (bottom-left on a phone): an 80s
 head unit with a glowing readout, a tuning band with a needle, and five
 presets. Each station plays one sound: **88.5 NOIR**, **92.3 ELECTRO**,
-**97.9 MIAMI**, **103.5 AMIGA**, and **107.7 NIGHT FM**, which mixes them all
+**97.9 MIAMI**, **100.7 COSMIC**, **103.5 AMIGA**, and **107.7 NIGHT FM**, which mixes them all
 (it's where you start). Change station with `←` / `→`, the presets, the TUNE
 knob, the mouse wheel, or by dragging the needle along the band. Between
 stations there's static. The PWR knob turns the music on and off. The stereo
@@ -100,7 +100,7 @@ URL options:
 - `?q=0|1|2` forces a quality level. The default is automatic.
 - `?debug` shows stats on load.
 - `?mute` keeps the soundtrack off.
-- `?style=miami|amiga|electro|noir` starts on that style's station.
+- `?style=miami|amiga|electro|noir|cosmic` starts on that style's station.
 - `?rec=1440p` or `?rec=4k` records at that size. The default is 1080p.
 
 Options combine with `&`, for example `?weather=storm&seed=7`.
@@ -111,7 +111,7 @@ Listen to a sample: [`docs/soundtrack-sample.webm`](docs/soundtrack-sample.webm)
 recorded before the Amiga and Electro styles and the vocals were added).
 
 An endless 80s night-drive mix, synthesised live in the browser. Every track
-is composed on the fly in one of four styles, and the style usually changes
+is composed on the fly in one of five styles, and the style usually changes
 from one track to the next:
 
 - **Miami** (108–122 BPM): four-on-the-floor disco with a gated 80s snare, an
@@ -129,6 +129,30 @@ from one track to the next:
   open in the choruses, and a lonely lead drifts in echo. A deep robot voice
   tells the verses and a soft female voice answers in the choruses. No
   snare-roll build-ups: a tom run leads into each chorus.
+- **Cosmic** (116–126 BPM): old-school space electro, with OPL Bastards'
+  "Scorpius" as the reference (original music). A crisp 808 with the kick
+  dancing around claps on two and four, sixteenth hats and rimshots, a funky
+  FM slap bass that pops up an octave and slides, a glassy FM-bell sequencer,
+  a string machine, a sync lead and the vocoder robot, over brighter dorian
+  chords. Its tracks have names like "Andromeda Funk".
+
+No two tracks are put together the same way. Each one picks:
+- **How it opens.** Only some fade up through the filter sweep. Others start
+  dry on the drum machine, on the bassline alone, on a sequencer riff, on
+  the pads, or on a percussion groove, and the rest of the band comes in
+  part by part.
+- **Two or three session players** on top of the style's own sound: a
+  chicken-scratch funk guitar, an FM electric piano, FM bells or marimba, congas,
+  bongos, shaker and timbales, a synth sax (it takes the verse tune and the
+  breakdown solo), a choir, a horn section, laser zaps, or record scratches
+  on the vocals.
+- **The groove.** An octave disco bass, Moroder-style sixteenths, a funk line
+  or an FM slap bass; eighth, sixteenth, off-beat or shuffled hi-hats.
+- **How the builds wind up.** A snare roll, a tom climb, a kick roll or a clap
+  roll, and not always the white-noise whoosh.
+- **What the breakdown strips back to.** A filtered pad wash, a bare beat
+  with the bass, or the keys on their own.
+- **Its fills**, two kinds taking turns at the end of each phrase.
 
 Each track picks its key, tempo, chord loops and grooves fresh, and writes its
 own melodies: an eight-bar hook for the drops (a statement, its answer, a
@@ -245,10 +269,13 @@ standard 16:9 size, so pixels stay perfectly square and crisp: 2× for 720p,
   and aircraft (planes, a helicopter with a searchlight, and the blimp with
   its scrolling LED sign).
 - `src/audio.js`: the generative soundtrack (the opening's lobby loop and the
-  jump into a drop on START, composer and melody writer,
-  sequencer, the four styles' synths and drum kits, 8-bit samples, gated
+  jump into a drop on START, composer, arranger and melody writer,
+  sequencer, the five styles' synths and drum kits, 8-bit samples, gated
   reverb, ping-pong delay, sidechain, and the vocoder), the weather ambience,
   and the beat and drop sync for the visuals.
+- `src/band.js`: the session players (funk guitar from plucked-string
+  synthesis, FM piano, bells and slap bass, hand drums, sax, choir, zaps
+  and scratches) and when each one plays.
 - `tools/make-vocals.js`: generates the vocal pack from `tools/vocals.json`.
 - `src/radio.js`: the car stereo (drawn in pixels on its own small canvas
   over the picture, so recordings stay clean) and its tuning; the static and
