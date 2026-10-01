@@ -117,10 +117,11 @@
         window: 0,   // 0 = window down, 1 = up
         // the opening scene switches these: is he in the car, shades on,
         // engine and lights, the door, how much the car drifts in its lane
-        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 1, door: 0, seat: null,
+        driverIn: true, shades: 1, engine: 1, lights: 1, pods: 0, podsUp: false, door: 0, seat: null,
         drift: 1, armHoldUntil: 0, idleBob: 0, lookCam: false,
       };
-      if (this.parked) Object.assign(this.hero, { driverIn: false, shades: 0, engine: 0, lights: 0, pods: 0, drift: 0, armOut: 0, armHoldUntil: Infinity });
+      if (this.parked) Object.assign(this.hero, { driverIn: false, shades: 0, engine: 0, lights: 0, drift: 0, armOut: 0, armHoldUntil: Infinity });
+      else if (this.podsWeather(false)) Object.assign(this.hero, { pods: 1, podsUp: true }); // already up if we start in the rain
       this.fxr = ND.rng(seed + 333);
       if (this.parked && !opts.weather) this.weather.hold = true;
       this.intro = this.parked && ND.Intro ? new ND.Intro(this) : null;
@@ -474,6 +475,14 @@
           if (hero.armOut === 1) hero.armQuiet = false;
         }
       }
+      // pop-up headlights: they flip open in rain, storms and mist and fold
+      // away on a clear night (in the opening scene they open as she starts)
+      if (!this.intro || !this.intro.active) hero.podsUp = this.podsWeather(hero.podsUp);
+      if (hero.podsUp !== !!hero.podsWent) {
+        hero.podsWent = hero.podsUp;
+        if (!init) ND.bus.emit('pods', { up: hero.podsUp });
+      }
+      hero.pods = ND.clamp(hero.pods + (hero.podsUp ? 1 : -1) / 42, 0, 1);
       // cigarette smoke, whisked back by the wind (car-local coordinates)
       const A = hero.arm, fr = A.frames[ND.clamp(Math.round(((hero.armTh - A.th0) / (A.th1 - A.th0)) * (A.N - 1)), 0, A.N - 1)];
       const fx = this.fxr, rain = this.weather.v.rain;
@@ -511,6 +520,13 @@
       // wind: palms sway harder, clouds race in storms
       this.sway = (this.sway || 0) + (2.2 + this.weather.v.storm * 5 + this.weather.v.rain * 1.5) / 60;
       this.cloudShift = (this.cloudShift || 0) + 1 + this.weather.v.storm * 5 + this.weather.v.rain * 1.5;
+    }
+
+    // Is it thick enough out for the pop-ups? (A gap between up and down, so
+    // they don't flap while the weather eases from one phase to the next.)
+    podsWeather(up) {
+      const v = this.weather.v, thick = Math.max(v.rain, v.fog);
+      return up ? thick > 0.34 : thick > 0.4;
     }
 
     // run a slice of queued generation work

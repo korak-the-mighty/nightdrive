@@ -171,7 +171,11 @@ The world reacts to the music:
 - A drop during a storm brings a lightning strike with it.
 
 The weather reacts too: rain and tyre hiss follow its intensity, and thunder
-rolls in after each lightning strike.
+rolls in after each lightning strike. When rain, a storm or mist rolls in, the
+pop-up headlights flip open the way a Porsche 928's do. Each lamp lies in the
+hood with its glass facing the sky, then turns forward with a little motor
+whirr, so its beam swings down out of the sky and onto the road, lighting up
+the rain and mist far ahead. On a clear night they fold away again.
 
 ## Recording for YouTube
 
@@ -197,10 +201,10 @@ standard 16:9 size, so pixels stay perfectly square and crisp: 2× for 720p,
   sprite authoring and noise.
 - `src/art/*`: procedural art: sky and moon, three depths of skyline plus the
   causeway, Art Deco facades lit by their own neon (baked light maps), palms,
-  pedestrians with skeletal walk cycles, the hero car and its talking driver,
-  period traffic (full-size sedans, vinyl-roofed coupes, a Trans Am, a woodie
-  wagon, a square-body pickup, a Checker cab and a police cruiser), and
-  street props.
+  pedestrians with skeletal walk cycles, the hero car (with its flip-up
+  headlights) and its talking driver, period traffic (full-size sedans,
+  vinyl-roofed coupes, a Trans Am, a woodie wagon, a square-body pickup, a
+  Checker cab and a police cruiser), and street props.
 - `src/world.js`: the endless world. Parallax sequences spawn to the left
   and retire off the right. Building art is generated in small time slices
   between frames, so nothing stalls the frame.

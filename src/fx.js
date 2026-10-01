@@ -41,6 +41,30 @@
     return pb.canvas();
   }
 
+  // The same beam tilted up by `elev` radians (the pop-ups flipping open).
+  // The apex sits at (ax, ay) in the image.
+  function genBeamAt(len, spread, color, elev, falloff = 1.1) {
+    const dx = -Math.cos(elev), dy = -Math.sin(elev); // along the beam
+    const nx = -dy, ny = dx; // across it
+    const ends = [[0, 0], [dx * len + nx * spread, dy * len + ny * spread], [dx * len - nx * spread, dy * len - ny * spread]];
+    const x0 = Math.floor(Math.min(...ends.map((p) => p[0]))) - 1, x1 = Math.ceil(Math.max(...ends.map((p) => p[0]))) + 1;
+    const y0 = Math.floor(Math.min(...ends.map((p) => p[1]))) - 1, y1 = Math.ceil(Math.max(...ends.map((p) => p[1]))) + 1;
+    const pb = new ND.PB(x1 - x0, y1 - y0);
+    for (let y = 0; y < pb.h; y++)
+      for (let x = 0; x < pb.w; x++) {
+        const rx = x + x0 + 0.5, ry = y + y0 + 0.5;
+        const u = rx * dx + ry * dy;
+        if (u < 0 || u > len) continue;
+        const t = u / len;
+        const half = 1 + (spread - 1) * Math.pow(t, 0.8);
+        const d = Math.abs(rx * nx + ry * ny) / half;
+        if (d >= 1) continue;
+        const a = dq((1 - d * d) * Math.pow(1 - t, falloff), x, y);
+        if (a > 0) pb.set(x, y, ND.pack(color[0] * a, color[1] * a, color[2] * a));
+      }
+    return { c: pb.canvas(), ax: -x0, ay: -y0, elev };
+  }
+
   // Elongated pool of light on the road ahead of a car.
   function genGroundBeam(len, h, color) {
     const pb = new ND.PB(len, h);
@@ -355,6 +379,7 @@
 
   ND.genCone = genCone;
   ND.genBeam = genBeam;
+  ND.genBeamAt = genBeamAt;
   ND.genGroundBeam = genGroundBeam;
   ND.genGrain = genGrain;
   ND.genUmbrellas = genUmbrellas;
