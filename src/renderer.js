@@ -947,9 +947,9 @@
         // facing us it hangs from the left corner of his mouth, against the dark
         // cabin; in profile it points up the road
         const dy = cam && mouth > 0.55 ? 1 : 0;
-        const pts = cam ? [[4, 14], [3, 14], [2, 15], [1, 15], [0, 16]] : [[0, 13], [-1, 13], [-2, 14], [-3, 14]];
+        const pts = cam ? [[5, 14], [4, 14], [3, 15], [2, 15], [1, 16]] : [[0, 13], [-1, 13], [-2, 14], [-3, 14]];
         pts.forEach(([x, y], i) => px(x, y + dy, i ? '#f8f4ec' : '#d8963c'));
-        const [ex, ey] = cam ? [-1, 16 + dy] : [-4, 14];
+        const [ex, ey] = cam ? [0, 16 + dy] : [-4, 14];
         const hot = 0.55 + 0.45 * ND.noise(R.t * 7, 4.1, 3);
         px(ex, ey, `rgb(255,${(120 + hot * 110) | 0},${(40 + hot * 60) | 0})`);
         g.fillStyle = `rgba(255,120,40,${0.55 + hot * 0.45})`;
@@ -960,9 +960,9 @@
         // the hand comes up from below with a chrome lighter, lid flipped open
         const k = h.lighter, up = Math.round(Math.sin(Math.min(1, k * 1.25) * Math.PI) * 5);
         const hy = 20 - up;
-        cx.fillStyle = '#8a4a3c'; cx.fillRect(fx - 3, fy + hy - 1, 8, 6);
-        cx.fillStyle = '#f0b494'; cx.fillRect(fx - 2, fy + hy, 6, 4);
-        cx.fillStyle = '#f8c6a6'; cx.fillRect(fx - 2, fy + hy, 3, 1);
+        cx.fillStyle = '#835038'; cx.fillRect(fx - 3, fy + hy - 1, 8, 6);
+        cx.fillStyle = '#e4a383'; cx.fillRect(fx - 2, fy + hy, 6, 4);
+        cx.fillStyle = '#edb390'; cx.fillRect(fx - 2, fy + hy, 3, 1);
         cx.fillStyle = '#2a2436'; cx.fillRect(fx - 3, fy + hy - 5, 4, 5);
         cx.fillStyle = '#eef0fa'; cx.fillRect(fx - 2, fy + hy - 4, 2, 4);
         cx.fillStyle = '#9aa0c0'; cx.fillRect(fx - 1, fy + hy - 4, 1, 4);

@@ -16,99 +16,99 @@
   const BODY_DY = 4;                   // the body sits this much lower, under the bigger head
 
   // ---- heads ------------------------------------------------------------------
-  // Standing, he gets a bigger head than the 18-px one at the wheel, so his face
-  // reads: blond hair swept back in strands (a lock falling forward), heavy
-  // brows, deep-set eyes, a long nose, stubble, a square jaw, an ear, a dark
-  // outline. The mullet is the hair on the right.
+  // Drawn after the character sheet, at 56 percent of its size: long straight
+  // blond hair swept back from the forehead (a lock curling over it) and falling
+  // to the shoulders, straight brows, blue eyes, a long nose, a slight smile, a
+  // defined jaw, and a dark outline. The hair right of column 13 blows in the wind.
   const PAL = {
-    O: rgb('#24140e'), K: rgb('#24140e'), // outline: O on the hair (blows with it), K on the face
-    H: rgb('#fff2b4'), h: rgb('#f0c862'), d: rgb('#c8923a'), k: rgb('#8a5a22'),
-    B: rgb('#5a3618'), S: rgb('#f6bc94'), s: rgb('#de9c72'), z: rgb('#b8724e'), Z: rgb('#8a4a32'),
-    x: rgb('#c88866'), r: rgb('#a85a3e'), e: rgb('#c4705a'), n: rgb('#d89068'), N: rgb('#a8603e'),
-    E: rgb('#24140e'), W: rgb('#e6dad0'), I: rgb('#587494'), b: rgb('#8a5a2a'), u: rgb('#d89a80'),
-    l: rgb('#c06852'), T: rgb('#fff4ea'), m: rgb('#4a1418'), G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
+    O: rgb('#140a0a'), K: rgb('#140a0a'), // outline: O on the hair (blows with it), K on the face
+    L: rgb('#fad58d'), H: rgb('#eebb66'), h: rgb('#d7a052'), d: rgb('#bb8441'), k: rgb('#9e6934'),
+    A: rgb('#edb390'), S: rgb('#e4a383'), s: rgb('#d08e74'), x: rgb('#bc7f64'), z: rgb('#a96c57'),
+    Z: rgb('#945b4b'), N: rgb('#835038'), m: rgb('#6a3e31'), B: rgb('#472a29'), E: rgb('#201614'),
+    I: rgb('#3f6fb0'), W: rgb('#b4bccb'), T: rgb('#fff4ea'), e: rgb('#a96c57'), n: rgb('#d08e74'),
   };
-  // to the camera, turned a touch to his right (22 x 24)
+  // to the camera (22 x 24)
   const CAM = [
-    '......OOOOOOOO........',
-    '....OhdHHhHhdhhO......',
-    '...OhhdHhdHHdhhhO.....',
-    '..OhhdhHhdhhhdHhhO....',
-    '..OhHhdhhdhhdhhHhdO...',
-    '.OhdhhdhhdhhdhhhdhhO..',
-    '.OhdhhhSSSSSSShhdhhO..',
-    '.OhdhhhSSSSSSSShhhhhO.',
-    '.OdhSdhSSSSSSSShhhhdO.',
-    '.OdKBBBSSSSSBBBKhhkdhO',
-    '.OdKSBBBBSBBBBsKKhhdhO',
-    '.KsKsWIWSSSWIWsKsKhddO',
-    '.KrKSsssSSsssssKrKkddO',
-    '.KsKSSSSSSsSSssKrKhddO',
-    '..KKzSSSsSsSSszKsKhddO',
-    '...KzSSsZsZsSszKKhkddO',
-    '...KxSsxSxSxZsxKhhhddO',
-    '...KSxzZZZZZSxsKhhhdhO',
-    '....KSxSsssSxSshhhhhO.',
-    '.....KSxSxSxSKhhhhhO..',
-    '......KKKKKKK.OhhhO...',
-    '......nNNNNNN..OO.....',
-    '......nnnnnnN.........',
-    '......nnnnnnN.........',
+    '.......OOOOO..........',
+    '.....OOhkLhdOO........',
+    '....OkkHLkLHdhO.......',
+    '...OkhLkhhHLkdhO......',
+    '..OhhLkkhhkkLkdhO.....',
+    '..OhkhkhhhhhkkHhO.....',
+    '..OhHLhkSSSSSLkkhO....',
+    '.OhkhhhSSSSSSSLkhO....',
+    '.OhkzhkSSSSSSSZkkO....',
+    '.OkzxSSSSSSSSSxZkO....',
+    '.OkzBBBBSSSBBBBZkO....',
+    '.OkzSWIWSASWIWxZkO....',
+    '.OkzSzxxSAzxxzxZkO....',
+    '.OkzSAASSAzAASzZLO....',
+    '.OkzzASSSAzSSSzZkhO...',
+    '.OkzzSSzSSzzSxzZhkO...',
+    '.OkmxSSSmZmSSzzmhLO...',
+    '.OkLmxxSssszZSmdhkO...',
+    '.OkhdmSZmmmZxmhdHkO...',
+    '.OHhdhmxSASxmhhdhkO...',
+    '.OkhdhhmmmmmhhhdhkO...',
+    '.OkhdkZNNNNNZkhdhkO...',
+    '.OhhdksssssxzkhdhO....',
+    '..hhhksssssxzkhhhh....',
   ];
   // [x, y, pixel] edits for talking, blinking and glancing aside
-  const CAM_MOUTH = [[], [[6, 17, 'Z'], [7, 17, 'm'], [8, 17, 'm'], [9, 17, 'm'], [10, 17, 'Z']],
-    [[6, 17, 'Z'], [7, 17, 'T'], [8, 17, 'T'], [9, 17, 'T'], [10, 17, 'Z'], [7, 18, 'm'], [8, 18, 'm'], [9, 18, 'm']]];
-  const CAM_BLINK = [[4, 11, 'z'], [5, 11, 'Z'], [6, 11, 'z'], [11, 11, 'z'], [12, 11, 'Z'], [13, 11, 'z']];
-  const CAM_SIDE = [[4, 11, 'I'], [5, 11, 'W'], [11, 11, 'I'], [12, 11, 'W']];
-  // profile, looking up the street (left)
+  const CAM_MOUTH = [[], [[8, 18, 'E'], [9, 18, 'E'], [10, 18, 'E']],
+    [[8, 18, 'T'], [9, 18, 'T'], [10, 18, 'T'], [8, 19, 'E'], [9, 19, 'E'], [10, 19, 'E']]];
+  const CAM_BLINK = [[5, 11, 'm'], [6, 11, 'm'], [7, 11, 'x'], [11, 11, 'x'], [12, 11, 'm'], [13, 11, 'm']];
+  const CAM_SIDE = [[5, 11, 'I'], [6, 11, 'W'], [11, 11, 'I'], [12, 11, 'W']];
+  // profile, looking up the street (left) (25 x 24); its neck sits SIDE_DX further right
   const SIDE = [
-    '.....OOOOOOO..........',
-    '...OhHHHhHhhhO........',
-    '..OhddddhddhhhhO......',
-    '..OhHHhhhHHdhhhhO.....',
-    '.OddddhdddhhddhhhO....',
-    '.OhhhhHhhhddhhdhhhO...',
-    '.OhKSSShhhHhdHhdhhhO..',
-    '.OhKSSSSddhhhhdhdhhO..',
-    '..KSSSSSShdddhhdhhhO..',
-    '..KBBBBSdhhhhdhhhdhO..',
-    '...KIWzSsdhhKKdhhdhhO.',
-    '..KSssSSsdhsSrKdhhdhO.',
-    '.KSSSSSSSdhsSrKhhhdhO.',
-    'KSSssSSSsSSsSrKhhhdhO.',
-    '.KKZSSSSSsSszrKdhhdhO.',
-    '..KSxxSSSszSKKhdhhdhO.',
-    '..KZZzxSxSszKzhdhdhhO.',
-    '...KSxSxSssKzzhdhdhO..',
-    '..KxSxSxSzKzzzhdhdhO..',
-    '...KKKKKKKzzzzhhhhO...',
-    '......KnnNNNNOhhhO....',
-    '......KnnnnnN.OhO.....',
-    '......nnnnnnN.........',
-    '......nnnnnnN.........',
+    '......OOOOOO.............',
+    '....OOHHkkkhOOO..........',
+    '...OkkkLLhHkkkhO.........',
+    '..OhhHHkkkkHhhhhO........',
+    '..OkkkhhdHdLkkhhhO.......',
+    '.OhhSSSdhhhhHdkhhO.......',
+    '.OhSASSxkkkkkLHdHhO......',
+    '.OSAASSSxhdddddhhkO......',
+    '..KASSSSxhhhHhkddhO......',
+    '..KBBBBSSxkkkkhhLdhO.....',
+    '...KIWzxSkhmmhkHhHhO.....',
+    '..KAxxSxSkksSmhhkhkO.....',
+    '.KAAsSSxxSkszmkhkdhO.....',
+    'KSSSsSSzzSSszmhkkHdhO....',
+    '.KSmSzSSzzSsSmhkhkLdO....',
+    '..KSSzzSSzZmZkhhkhkhO....',
+    '..KmmzSSSSZZmxhhhkHkdO...',
+    '...KSSSSSSmmSxkhHhkhLO...',
+    '...KSSSSmmzzzzzkhLhkHhO..',
+    '....KKKszNNzzzzzkhhhkkO..',
+    '.......KZZZssxzkkkhHhHhO.',
+    '.......KsssssxzkhhkkhhkO.',
+    '.......KsssssxzkhhhhkkhhO',
+    '.......ssssssxzhhhhhhhhh.',
   ];
-  const SIDE_MOUTH = [[], [[3, 16, 'm'], [4, 16, 'm']], [[3, 16, 'm'], [4, 16, 'm'], [3, 17, 'm'], [4, 17, 'T']]];
-  const SIDE_BLINK = [[4, 10, 'Z'], [5, 10, 'z']];
+  const SIDE_DX = 2;
+  const SIDE_MOUTH = [[], [[3, 16, 'E'], [4, 16, 'E']], [[3, 16, 'E'], [4, 16, 'E'], [3, 17, 'E'], [4, 17, 'm']]];
+  const SIDE_BLINK = [[4, 10, 'm'], [5, 10, 'x']];
   // the small profile from the car (cars.js), for the moment he's in the seat
   const SIDE_SMALL = [
-    '......kkkkkk......',
-    '....kkhHHHHhkk....',
-    '...khHHHhhhhhhk...',
-    '..khHhhhhhhhhhdk..',
-    '..khhhhhhhhhhhddk.',
-    '.khhhhhhhhhhhhdddk',
-    '.kShhhhshhhhhhdddk',
-    '..Sddssssshhhhdddk',
-    '.SSSEsssssehhhdddk',
-    '..SSSSssszeehhdddk',
-    'SSSSssssszeehhdddk',
-    '..SSsssssszzhhdddk',
-    '.SSSssssszzzhhdddk',
-    '..SSsssszzzzhhddk.',
-    '..Ssssszzzzzhhdddk',
-    '....zzzzzzzzhhdddk',
-    '......nnnnnnhhddk.',
-    '......nnnnnhhdddk.',
+    '.....OOOOOO.......',
+    '...OOdddddhOO.....',
+    '..OhhLLkkkdddO....',
+    '.OkkkhhHhLkkkhO...',
+    '.OhhLhhhHhLHhkkO..',
+    '.OSShhkkkkkhhLhkO.',
+    '.OASSShhhhhkLkHhO.',
+    '.OBBBSShhhhhhhkhO.',
+    '.OIWxSSSSSkhhhhLhO',
+    '.OSSSSSSSexhkHhkhO',
+    'OAASSSxxSexdhkhhkO',
+    '.OzSSSxxSexhdkhhhO',
+    '.OzSSSSSxSkhdhkhHO',
+    '..OSSSSSzzShdhkLhO',
+    '..OOSSSSSzzhhdhkhO',
+    '....OOzzzzzzhdhhkO',
+    '......ONnnzzHhdhkO',
+    '......OnnnnzhhdhLO',
   ];
   const edit = (rows, edits) => {
     const g = rows.map((r) => [...r]);
@@ -126,7 +126,7 @@
       const o = y >= 9 ? Math.round(sway * ((y - 8) / (h - 9)) * 2.4) : y <= 2 ? Math.round(sway * 0.8) : 0;
       [...row].forEach((ch, x) => {
         if (ch === '.') return;
-        const hair = ch === 'h' || ch === 'H' || ch === 'd' || ch === 'k' || ch === 'O';
+        const hair = ch === 'h' || ch === 'H' || ch === 'd' || ch === 'k' || ch === 'O' || ch === 'L';
         const dx = hair && x >= 13 ? o : 0;
         const c = PAL[ch];
         const px = flip ? w - 1 - (x + dx) : x + dx;
@@ -144,10 +144,10 @@
 
   // ---- body ---------------------------------------------------------------------
   const C = {
-    blazer: rgb('#8fb8f0'), blazerL: rgb('#d2e8ff'), blazerD: rgb('#5474b4'), blazerDD: rgb('#34467e'),
-    tee: rgb('#262030'), teeD: rgb('#18141e'),
-    pants: rgb('#f0ece4'), pantsD: rgb('#bdb4cc'), pantsDD: rgb('#8e86a8'),
-    skin: rgb('#f0b494'), skinL: rgb('#f8c6a6'), skinD: rgb('#b06a54'),
+    blazer: rgb('#8fa6d2'), blazerL: rgb('#b4c6e6'), blazerD: rgb('#61769f'), blazerDD: rgb('#3e4a6c'),
+    tee: rgb('#221c26'), teeD: rgb('#141018'), belt: rgb('#18141c'), buckle: rgb('#e8b848'), buckleD: rgb('#9a7024'),
+    pants: rgb('#d6d6e2'), pantsD: rgb('#aeaec2'), pantsDD: rgb('#7e7e98'),
+    skin: rgb('#e4a383'), skinL: rgb('#edb390'), skinD: rgb('#a96c57'),
     shoe: rgb('#dcc294'), shoeD: rgb('#9c7a4c'), sole: rgb('#3a2620'),
     ink: rgb('#1c1028'), gold: rgb('#ffd65a'), paper: rgb('#f6f2e8'), filter: rgb('#d8963c'),
   };
@@ -225,19 +225,20 @@
       if (!tset.has(x - 1 + ',' + y) || !tset.has(x + 1 + ',' + y) || !tset.has(x + ',' + (y + 1))) pb.set(x, y, ND.pack(...C.blazerDD));
     }
     // tee in the open front, lapels
-    const tee = [[18 + sx, 22], [27 + sx, 22], [26 + sx, 40], [25, 61], [20, 61], [19 + sx, 40]];
+    // (the blazer falls open in a wide V, broad lapels folded back with a dark crease)
+    const tee = [[16 + sx, 22], [29 + sx, 22], [26 + sx, 40], [25, 61], [20, 61], [19 + sx, 40]];
     pb.polyFn(tee, (x, y) => pb.set(x, y, ND.pack(...(x > 24 + sx ? C.teeD : C.tee))));
-    pb.lineFn(18 + sx, 23, 21 + sx, 44, (x, y) => { pb.set(x, y, ND.pack(...C.blazerL)); pb.set(x - 1, y, ND.pack(...C.blazer)); });
-    pb.lineFn(27 + sx, 23, 24 + sx, 44, (x, y) => { pb.set(x, y, ND.pack(...C.blazerD)); pb.set(x + 1, y, ND.pack(...C.blazer)); });
+    pb.lineFn(16 + sx, 23, 21 + sx, 44, (x, y) => { pb.set(x, y, ND.pack(...C.blazerL)); pb.set(x - 1, y, ND.pack(...C.blazer)); if (y < 38) pb.set(x - 3, y, ND.pack(...C.blazerDD)); });
+    pb.lineFn(29 + sx, 23, 24 + sx, 44, (x, y) => { pb.set(x, y, ND.pack(...C.blazerD)); pb.set(x + 1, y, ND.pack(...C.blazer)); if (y < 38) pb.set(x + 3, y, ND.pack(...C.blazerDD)); });
     pb.lineFn(21 + sx, 44, 20, 61, (x, y) => pb.set(x, y, ND.pack(...C.blazerD)));
     pb.lineFn(24 + sx, 44, 25, 61, (x, y) => pb.set(x, y, ND.pack(...C.blazerD)));
-    // belt, pocket flaps, and a pink pocket square
-    for (let x = 20; x <= 25; x++) pb.set(x, 56, ND.pack(...C.shoeD));
-    pb.set(22, 56, ND.pack(...C.gold));
+    // black belt with a gold buckle, two buttons, pocket flaps
+    for (let x = 19; x <= 26; x++) { pb.set(x, 56, ND.pack(...C.belt)); pb.set(x, 57, ND.pack(...C.belt)); }
+    for (const [x, y, c] of [[21, 56, C.buckle], [22, 56, C.buckle], [23, 56, C.buckle], [21, 57, C.buckleD], [22, 57, C.belt], [23, 57, C.buckleD]]) pb.set(x, y, ND.pack(...c));
+    pb.set(19 + sx, 47, ND.pack(...C.blazerDD)); pb.set(19, 53, ND.pack(...C.blazerDD));
     for (let x = 12; x <= 17; x++) pb.set(x + sx, 49, ND.pack(...C.blazerDD));
     for (let x = 27; x <= 32; x++) pb.set(x + sx, 49, ND.pack(...C.blazerDD));
     for (let x = 28; x <= 31; x++) { pb.set(x + sx, 30, ND.pack(...C.blazerDD)); }
-    pb.set(29 + sx, 28, ND.pack(255, 110, 200)); pb.set(30 + sx, 28, ND.pack(255, 160, 220)); pb.set(29 + sx, 29, ND.pack(255, 80, 180)); pb.set(30 + sx, 29, ND.pack(255, 110, 200));
     // hand-in-pocket arm (screen right): sleeve out to the elbow, forearm
     // angling back in, the hand gone into the trouser pocket
     limb(pb, [32 + sx, 26], [37 + sx, 43], 3.4, 3.0, C.blazerD, C.blazerDD);
@@ -310,7 +311,8 @@
     const key = view + mouth + (blink ? 'b' : '') + sway;
     let cv = headCache[key];
     if (!cv) cv = headCache[key] = renderHead(view, mouth, blink, sway);
-    ctx.drawImage(cv, view === 'right' ? x - 3 : x, y); // the flipped map is offset by 3
+    // line the profile's neck up with the body's (the mirrored one from the other side)
+    ctx.drawImage(cv, view === 'right' ? x + 18 + SIDE_DX - cv.width : view === 'left' ? x - SIDE_DX : x, y);
     return cv;
   }
   function renderHead(view, mouth, blink, sway) {
@@ -403,7 +405,7 @@
     // (seated, the small head from the car; on his feet, the big one)
     const hp = pose.small ? headCanvas(SIDE_SMALL, [], pose.sway || 0, false)
       : headCanvas(SIDE, [...(pose.blink ? SIDE_BLINK : []), ...(SIDE_MOUTH[pose.mouth || 0] || [])], pose.sway || 0, false);
-    const hx = Math.round(S[0] + f[0] * 1.5 - (pose.small ? 9 : 8.5)), hy = Math.round(S[1] - (pose.small ? 20 : 24));
+    const hx = Math.round(S[0] + f[0] * 1.5 - (pose.small ? 9 : 8.5 + SIDE_DX)), hy = Math.round(S[1] - (pose.small ? 20 : 24));
     L('head').blit(hp, hx, hy);
     leg(pose.nearLeg, false);
     arm(pose.nearArm, false);

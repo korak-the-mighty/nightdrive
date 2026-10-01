@@ -49,78 +49,80 @@
     return pts;
   }
 
-  // Driver: solid profile facing left (forehead, wraparound shades, nose,
-  // lips, chin, jaw, ear, neck) with a blond mullet, pastel jacket.
+  // Driver, after the character sheet: long blond hair swept back from the
+  // forehead and falling behind to his shoulders, wraparound shades, a long
+  // nose, the light blue blazer over a black tee, and a dark outline.
   // Origin placed at car-local (144, 5); rows past the beltline are clipped.
   const DRIVER = [
-    '......kkkkkk......',
-    '....kkhHHHHhkk....',
-    '...khHHHhhhhhhk...',
-    '..khHhhhhhhhhhdk..',
-    '..khhhhhhhhhhhddk.',
-    '.khhhhhhhhhhhhdddk',
-    '.kShhhhshhhhhhdddk',
-    '..SSSssssshhhhdddk',
-    '.GGGGGGGGGehhhdddk',
-    '..GgGGssszeehhdddk',
-    'SSSSssssszeehhdddk',
-    '..SSsssssszzhhdddk',
-    '.SSSssssszzzhhdddk',
-    '..SSsssszzzzhhddk.',
-    '..Ssssszzzzzhhdddk',
-    '....zzzzzzzzhhdddk',
-    '......nnnnnnhhddk.',
-    '......nnnnnhhdddk.',
-    '.....cwnnnnbhddk..',
-    '...cwbbbbbbbbbbBB.',
-    '..cwbbbwbbbbbbbbBB',
+    '.....OOOOOO.......',
+    '...OOdddddhOO.....',
+    '..OhhLLkkkdddO....',
+    '.OkkkhhHhLkkkhO...',
+    '.OhhLhhhHhLHhkkO..',
+    '.OSShhkkkkkhhLhkO.',
+    '.OASSShhhhhkLkHhO.',
+    '.OASSSShhhhhhhkhO.',
+    'GGGGGGGGGGkhhhhLhO',
+    '.GgGGGSSSexhkHhkhO',
+    'OAASSSxxSexdhkhhkO',
+    '.OzSSSxxSexhdkhhhO',
+    '.OzSSSSSxSkhdhkhHO',
+    '..OSSSSSzzShdhkLhO',
+    '..OOSSSSSzzhhdhkhO',
+    '....OOzzzzzzhdhhkO',
+    '......ONnnzzHhdhkO',
+    '......OnnnnzhhdhLO',
+    '.....cwnnnnbhhdkhO',
+    '...cwbbbbbbbbhHhkO',
+    '..cwbbbwbbbbbbOOOO',
   ];
   // Talking in profile: the lips part at the front of the face.
   const DRIVER_TALK = [
-    { 12: '.mSSssssszzzhhdddk' },
-    { 12: '.mmSssssszzzhhdddk', 13: '..mSsssszzzzhhddk.' },
+    {12: '.mzSSSSSxSkhdhkhHO'},
+    {12: '.mmSSSSSxSkhdhkhHO', 13: '..mSSSSSzzShdhkLhO'},
   ];
-  // Turned to the camera: shades, a grin, the mullet framing the face.
+  // Turned to the camera: shades, the hair falling on both sides.
   const DRIVER_CAM = [
-    '.....kkkkkkk......',
-    '...kkhHHHHHhkk....',
-    '..khHHHhhhhhhhk...',
-    '.khHhhhhhhhhhhdk..',
-    '.khhhhhhhhhhhhddk.',
-    'khhhSSSSSSShhhdddk',
-    'khhSSSSSSSSShhdddk',
-    'khSSSSSSSSSSShdddk',
-    'khGGGGGGGGGGGhdddk',
-    'khGgGGGsGgGGGhdddk',
-    'khSSSSSsSSSSShdddk',
-    'khSSSSszsSSSShdddk',
-    '.hSSSSSSSSSSShdddk',
-    '.hSSSlllllSSShddk.',
-    '.hsSSSSSSSSSshdddk',
-    '..hzsssssssszhdddk',
-    '...hzzzzzzzzhhddk.',
-    '....nnnnnnnhhdddk.',
-    '....cwnnnnnbhddk..',
-    '...cwbbbbbbbbbbBB.',
-    '..cwbbbwbbbbbbbbBB',
+    '.....OOOOOOO......',
+    '...OOhhkLkhhOO....',
+    '..OhhhdLhHLdhhO...',
+    '.OhhhdHhhhhHdhhO..',
+    '.OhhLhhhhhhhhLhO..',
+    '.OhdhhSSSSSShhdhO.',
+    'OhkHhLhSSSSSShHkhO',
+    'OhkxSSSSSSSSSzhkhO',
+    'OkLGGGGGGGGGGGhLkO',
+    'OkhGgGGGAGgGGGhhkO',
+    'OkhxSSSSAxSSSzhhkO',
+    'OkdxSSSzszSSSzhdkO',
+    'OkdxzSSSSSSSzzhdkO',
+    'OkdhxSlllllSzhhdkO',
+    'OkLhxSSSSSSzzhhdkO',
+    'OkdhhSSSASSShhhLkO',
+    'OkdhhhzxxxzhhhhdkO',
+    'OLdhhkNNNNNkOhhdLO',
+    'Okdhcwnnnnnb.OhdkO',
+    'OhhcwbbbbbbbbbhdkO',
+    'OOcwbbbwbbbbbbbOOO',
   ];
   const DRIVER_CAM_TALK = [
     {},
-    { 13: '.hSSlTTTTTlSShddk.' },
-    { 13: '.hSSlTTTTTlSShddk.', 14: '.hsSSlmmmlSSshdddk' },
+    {13: 'OkdhxSlTTTlSzhhdkO'},
+    {13: 'OkdhxSlTTTlSzhhdkO', 14: 'OkLhxSlmmmlzzhhdkO'},
   ];
   const DRIVER_PAL = {
-    H: rgb('#fff2b0'), h: rgb('#f2c662'), d: rgb('#c48c36'), k: rgb('#7a4e22'),
-    S: rgb('#f8c6a6'), s: rgb('#e49c7c'), z: rgb('#b06a54'), e: rgb('#c4705a'), n: rgb('#a8624e'),
+    O: rgb('#140a0a'), L: rgb('#fad58d'), H: rgb('#eebb66'), h: rgb('#d7a052'), d: rgb('#bb8441'), k: rgb('#9e6934'),
+    A: rgb('#edb390'), S: rgb('#e4a383'), s: rgb('#d08e74'), x: rgb('#bc7f64'), z: rgb('#a96c57'), e: rgb('#945b4b'),
+    n: rgb('#c88066'), N: rgb('#835038'), r: rgb('#472a29'), E: rgb('#201614'), I: rgb('#3f6fb0'), W: rgb('#b4bccb'),
     G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
-    c: rgb('#3a3446'), w: rgb('#262030'), b: rgb('#96c2f0'), B: rgb('#5c80bc'), // dark tee under the blazer
-    l: rgb('#d07a6a'), T: rgb('#fff8ee'), m: rgb('#5a1a24'), E: rgb('#2a1420'),
+    c: rgb('#3a3446'), w: rgb('#221c26'), b: rgb('#8fa6d2'), B: rgb('#61769f'), // black tee under the blazer
+    l: rgb('#b0685a'), T: rgb('#fff8ee'), m: rgb('#5a1a24'),
   };
   const DRIVER_O = [144, 5];
 
   // Before the shades go on (the opening scene): eyes and brows instead.
-  const BARE = { 7: '..Sddssssshhhhdddk', 8: '.SSSEsssssehhhdddk', 9: '..SSSSssszeehhdddk' };
-  const BARE_CAM = { 7: 'khSddSSSSSddShdddk', 8: 'khSEESSSSSEEShdddk', 9: 'khSSSSSsSSSSShdddk' };
+  const BARE = { 7: '.OrrrSShhhhhhhkhO.', 8: '.OIWxSSSSSkhhhhLhO', 9: '.OSSSSSSSexhkHhkhO' };
+  const BARE_CAM = { 7: 'OhkxrrrSSSrrrzhkhO', 8: 'OkLxWIWSSSWIWzhLkO', 9: 'OkhxxxxSASxxxzhhkO' };
 
   function genDriver() {
     const w = DRIVER[0].length, h = DRIVER.length;
@@ -169,8 +171,8 @@
   function genDriverArm() {
     const OX = 128, OY = 19, AW = 30, AH = 32, N = 11;
     const th0 = -0.08, th1 = 0.34;
-    const skin = rgb('#e8a282'), skinL = rgb('#f8c6a6'), skinD = rgb('#a8604c');
-    const sleeve = rgb('#96c2f0'), sleeveL = rgb('#d4ecff'), sleeveD = rgb('#5c80bc');
+    const skin = rgb('#e4a383'), skinL = rgb('#edb390'), skinD = rgb('#a96c57');
+    const sleeve = rgb('#8fa6d2'), sleeveL = rgb('#b4c6e6'), sleeveD = rgb('#61769f');
     const frames = [];
     for (let f = 0; f < N; f++) {
       const th = th0 + (f / (N - 1)) * (th1 - th0);
