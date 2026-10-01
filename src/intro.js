@@ -17,12 +17,12 @@
   // look at the camera and a cigarette all come first; his line ends on the
   // drop, and the music jumps so the drop lands after all of it.
   const TL = {
-    flick: 0, stand: 0.3, turn: 0.42, walkEnd: 0.95, doorOpen: 1.0, doorOpened: 1.4, reachEnd: 1.2,
-    stepEnd: 1.5, crouchEnd: 1.85, sitEnd: 2.2, swingMid: 2.42, swingEnd: 2.62, closeEnd: 2.92,
-    ignite: 3.0, catch: 3.46, shades: 3.8, shadesOn: 4.2, cam: 4.35,
-    lighter: 4.7, flame: 4.86, lit: 5.1, flameOut: 5.28, lighterDown: 5.46, puff: 5.62, line: 5.8,
+    flick: 0, stand: 0.3, turn: 0.42, walkEnd: 0.95, doorOpen: 1.0, reachEnd: 1.2, doorOpened: 1.3,
+    cut: 1.36, closeStart: 1.56, closeEnd: 1.76,
+    ignite: 1.86, catch: 2.32, shades: 2.66, shadesOn: 3.06, cam: 3.2,
+    lighter: 3.55, flame: 3.71, lit: 3.95, flameOut: 4.13, lighterDown: 4.31, puff: 4.47, line: 4.65,
   };
-  const MIN_DROP = 7.9;   // seconds from START to the drop, at least
+  const MIN_DROP = 6.8;   // seconds from START to the drop, at least
   const STRIDE = 44;      // px of road per walk cycle
 
   // --- side-view poses (car coordinates) ------------------------------------------
@@ -44,9 +44,6 @@
     return { hip: H, sh: S, nearLeg: leg(ph), farLeg: leg(ph + Math.PI), nearArm: arm(ph + Math.PI, 0), farArm: arm(ph, 2) };
   }
   const REACH = P([178, 36], [177, 0], [177, 64], [178, 92], [180, 64], [181, 92], [172, 16], [166, 31], [180, 17], [179, 33]);
-  const CROUCH = P([166, 47], [153, 16], [151, 66], [163, 92], [155, 67], [167, 92], [161, 8], [166, 2], [156, 31], [150, 42]);
-  const SIT_OUT = P([160, 56], [154, 25], [140, 62], [146, 92], [143, 63], [150, 92], [148, 40], [139, 24], [152, 40], [143, 26]);
-  const SWING = P([160, 56], [154, 25], [134, 50], [127, 70], [137, 51], [130, 71], [148, 40], [139, 23], [152, 40], [143, 25]);
   const SEATED = P([160, 56], [154, 25], [128, 50], [118, 70], [131, 51], [121, 71], [147, 40], [139, 22], [151, 40], [142, 24]);
   const ease = (t) => t * t * (3 - 2 * t);
   const lerp = (a, b, t) => (Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * t) : typeof a === 'object' ? Object.fromEntries(Object.keys(a).map((k) => [k, lerp(a[k], b[k], t)])) : a + (b - a) * t);
@@ -114,7 +111,7 @@
 
       if (this.state === 'lobby') {
         if (!talking && T >= this.nextLook) {
-          this.view = r.pick(['left', 'left', 'right', 'side']);
+          this.view = r.pick(['left', 'left', 'side']);
           this.lookUntil = T + r.int(70, 170);
           this.nextLook = this.lookUntil + r.int(150, 360);
         }
@@ -170,35 +167,19 @@
         this.cigGone = true;
       }
       if (t >= TL.stand && t < TL.turn) { this.arm = 'down'; this.pose = 'stand'; this.lift = 1; if (t > TL.stand + 0.06) this.view = 'left'; }
-      // --- the side view: walk to the door, open it, get in
-      let pose = null, inside = null;
+      // --- the side view: walk to the door and open it; then, old-school, he's
+      // simply in the seat (one cut), and the door slams
+      let pose = null;
       if (t >= TL.turn && t < TL.closeEnd) {
         const ph = (x) => ((202 - x) / STRIDE) * Math.PI * 2;
         if (t < TL.walkEnd) {
           const x = 202 - 23 * span(t, TL.turn, TL.walkEnd);
           pose = walkAt(x, ph(x));
-        } else if (t < TL.reachEnd) {
+        } else if (t < TL.cut) {
           pose = lerp(walkAt(179, ph(179)), REACH, ease(span(t, TL.walkEnd, TL.reachEnd)));
-        } else if (t < TL.stepEnd) {
-          // one step into the doorway, near knee lifting over the sill
-          const u = span(t, TL.reachEnd, TL.stepEnd), lift = Math.sin(u * Math.PI);
-          pose = lerp(REACH, standAt(166), ease(u));
-          pose.nearLeg.knee = [pose.nearLeg.knee[0] - lift * 5, pose.nearLeg.knee[1] - lift * 5];
-          pose.nearLeg.ankle = [pose.nearLeg.ankle[0] - lift * 3, pose.nearLeg.ankle[1] - lift * 7];
-        } else if (t < TL.crouchEnd) {
-          pose = lerp(standAt(166), CROUCH, ease(span(t, TL.stepEnd, TL.crouchEnd)));
-        } else if (t < TL.sitEnd) {
-          pose = lerp(CROUCH, SIT_OUT, ease(span(t, TL.crouchEnd, TL.sitEnd)));
-        } else if (t < TL.swingMid) {
-          pose = lerp(SIT_OUT, SWING, ease(span(t, TL.sitEnd, TL.swingMid)));
-          inside = { torso: 1, head: 1, arm: 1, farArm: 1 };
         } else {
-          pose = lerp(SWING, SEATED, ease(span(t, TL.swingMid, TL.swingEnd)));
-          inside = { torso: 1, head: 1, arm: 1, farArm: 1, thigh: 1, shin: 1, farLeg: 1 };
+          pose = Object.assign(lerp(SEATED, SEATED, 0), { small: true, inside: { torso: 1, head: 1, arm: 1, farArm: 1, thigh: 1, shin: 1, farLeg: 1 } });
         }
-        // he settles once he's in: a little bounce on the seat
-        if (t >= TL.sitEnd && t < TL.sitEnd + 0.2) pose.hip = [pose.hip[0], pose.hip[1] + Math.sin(span(t, TL.sitEnd, TL.sitEnd + 0.2) * Math.PI) * 1.5];
-        pose.inside = inside;
         pose.blink = this.tick < this.blinkUntil;
         pose.sway = this.sway;
         this.profile = ND.renderDudeProfile(pose);
@@ -208,11 +189,10 @@
         if (t >= TL.closeEnd) h.seat = null;
       }
       this.hidden = t >= TL.turn;
-      // the door: he pulls it open, it swings shut behind him
       if (this.once('doorOpen') && this.music) this.music.sfxDoor(this.sfxTime(), false);
-      if (t >= TL.doorOpen && t < TL.swingEnd) h.door = ease(span(t, TL.doorOpen, TL.doorOpened));
-      if (t >= TL.swingEnd) {
-        h.door = 1 - ease(span(t, TL.swingEnd, TL.closeEnd));
+      if (t >= TL.doorOpen && t < TL.closeStart) h.door = ease(span(t, TL.doorOpen, TL.doorOpened));
+      if (t >= TL.closeStart) {
+        h.door = 1 - span(t, TL.closeStart, TL.closeEnd) ** 2; // swung shut, hard
         if (t >= TL.closeEnd && !h.driverIn) {
           h.door = 0; h.driverIn = true; h.seat = null;
           if (this.music) this.music.sfxDoor(this.sfxTime(), true);

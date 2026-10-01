@@ -113,7 +113,7 @@
     H: rgb('#fff2b0'), h: rgb('#f2c662'), d: rgb('#c48c36'), k: rgb('#7a4e22'),
     S: rgb('#f8c6a6'), s: rgb('#e49c7c'), z: rgb('#b06a54'), e: rgb('#c4705a'), n: rgb('#a8624e'),
     G: rgb('#0c0a14'), g: rgb('#ff7ad8'),
-    c: rgb('#e4f2ff'), w: rgb('#ffffff'), b: rgb('#96c2f0'), B: rgb('#5c80bc'),
+    c: rgb('#3a3446'), w: rgb('#262030'), b: rgb('#96c2f0'), B: rgb('#5c80bc'), // dark tee under the blazer
     l: rgb('#d07a6a'), T: rgb('#fff8ee'), m: rgb('#5a1a24'), E: rgb('#2a1420'),
   };
   const DRIVER_O = [144, 5];
