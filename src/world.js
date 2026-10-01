@@ -100,7 +100,7 @@
       this.walkers = [];
       this.traffic = [];
       this.oncoming = [];
-      this.nextOncoming = 60 * 6;
+      this.nextOncoming = 60 * 3;
       this.hero = {
         body: ND.genHeroCar(),
         wheels: ND.genWheelFrames(),
@@ -383,14 +383,14 @@
     spawnOncoming(kind) {
       const r = this.r, f = ND.fAt(Y.ONC), V = this.vehicles;
       if (!kind) {
-        // mostly ordinary cars; a joke vehicle only now and then (never twice in a row)
+        // mostly ordinary cars; a joke vehicle at most once a minute (never twice in a row)
         const S = ND.ONCOMING_SPECIALS || {};
         const specials = Object.keys(S).filter((k) => !S[k].follow && k !== this.lastSpecial);
-        const due = (this.sinceSpecial = (this.sinceSpecial || 0) + 1) >= 3;
-        kind = due && specials.length && r() < 0.28 ? r.pick(specials) : 'car';
+        const due = this.tick - (this.lastSpecialAt ?? -1e9) >= 60 * 60;
+        kind = due && specials.length && r() < 0.2 ? r.pick(specials) : 'car';
       }
       const spec = (ND.ONCOMING_SPECIALS || {})[kind];
-      if (kind !== 'car') { this.sinceSpecial = 0; this.lastSpecial = kind; }
+      if (kind !== 'car' && !(spec && spec.follow)) { this.lastSpecialAt = this.tick; this.lastSpecial = kind; }
       const sp = kind === 'car' ? r.pick(this.oncomingPool) : V[spec.sprite];
       if (!sp) return;
       const v = kind === 'car' ? r.range(3.4, 4.8) : spec.v;
@@ -488,7 +488,7 @@
           this.spawnOncoming(k);
         } else if (this.tick >= this.nextOncoming) {
           this.spawnOncoming();
-          this.nextOncoming = this.tick + this.r.int(600, 1200); // every 10-20 s
+          this.nextOncoming = this.tick + this.r.int(150, 420); // every 2.5-7 s
         }
       }
 

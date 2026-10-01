@@ -652,8 +652,8 @@
       const a = this.oncAX, b = this.oncBX;
       for (const o of w.oncoming) {
         const S = o.sp, dw = Math.round(S.w * K), dh = Math.round(S.h * K);
-        // never let anything tall (a ladder, a giant cone) rise over our car: sink it a little
-        const sink = Math.max(0, Y.CAR - 2 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
+        // anything tall (a ladder, a giant cone) may cover our wheels, never the cabin: sink it a little
+        const sink = Math.max(0, Y.CAR - 36 - (Y.ONC - Math.round((S.ground - (S.top || 0)) * K)));
         const x = Math.round(CX + (R.D - o.P) * f), y = Y.ONC - Math.round(S.ground * K) + sink;
         if (x > W + 20 || x + dw < -40) continue;
         a.clearRect(0, 0, S.w + 2, S.h + 2);
@@ -662,12 +662,12 @@
         const R0 = S.wheelR || 13;
         for (const [wx, wy] of S.wheels) a.drawImage(S.wheelFrames[fr], wx - R0, wy - R0);
         if (S.anim) S.anim(a, R.t, o);
-        b.clearRect(0, 0, dw + 2, dh + 2);
+        b.clearRect(0, 0, this.oncB.width, this.oncB.height);
         b.save(); b.translate(dw, 0); b.scale(-1, 1);
         b.drawImage(this.oncA, 0, 0, S.w, S.h, 0, 0, dw, dh);
         b.restore();
         b.globalCompositeOperation = 'source-atop';
-        b.fillStyle = 'rgba(14,6,34,0.42)';
+        b.fillStyle = 'rgba(14,6,34,0.25)';
         b.fillRect(0, 0, dw, dh);
         b.globalCompositeOperation = 'source-over';
         // the beams ahead of it (to the right) light the wet road and the haze
@@ -679,7 +679,8 @@
         c.globalAlpha = (0.08 + 0.4 * Math.max(R.weather.v.rain, R.weather.v.fog * 0.8)) * (o.hi ? 2 : 1);
         c.drawImage(fx.tBeamAir, -128, hy - 9);
         c.restore();
-        // speed: two faint ghosts trailing behind, then the car itself
+        // its reflection in the wet road, then two faint speed ghosts trailing behind, then the car
+        this.reflect(this.oncB, x, y + Math.round(S.ground * K), Math.round(S.ground * K), 0.26, R.t, 30);
         c.globalAlpha = 0.16; c.drawImage(this.oncB, 0, 0, dw, dh, x - 16, y, dw, dh);
         c.globalAlpha = 0.3; c.drawImage(this.oncB, 0, 0, dw, dh, x - 8, y, dw, dh);
         c.globalAlpha = 1; c.drawImage(this.oncB, 0, 0, dw, dh, x, y, dw, dh);
